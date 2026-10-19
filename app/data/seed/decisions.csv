@@ -1,0 +1,5 @@
+decision_id,title,authority,kind,distance_km,submitted,deadline,status,summary
+D1,"Renewal of fertiliser application plan, Sector 7 Campo de Cartagena","CARM Consejería de Agua, Agricultura, Ganadería y Pesca",permit_renewal,3.0,2026-09-15,2026-11-20,open,"Renewal of the fertiliser plan allowing 1,200 t of nitrogen per year on 2,300 ha draining to the Rambla del Albujón, 3 km from the lagoon shore"
+D2,"Residential development plan, Cartagena outskirts",Ayuntamiento de Cartagena,planning,12.0,2026-08-30,2026-11-28,open,"Partial urban plan for 340 homes connected to the existing municipal sewer network, outside the lagoon catchment buffer"
+D3,Logistics park access road,CARM Fomento,infrastructure,18.0,2026-09-01,2026-11-30,open,New 2 km access road to a logistics park
+D4,Desalination brine outfall extension,CHS,infrastructure,2.0,2025-02-01,2025-05-01,closed,Closed in 2025

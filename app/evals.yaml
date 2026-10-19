@@ -1,12 +1,18 @@
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: nitrate_trend_is_agricultural_runoff
+    signal_contains: "nitrate mg l at Mar Menor centre"
+    expect_supported: [agricultural_runoff]
+    expect_rejected: [natural_variation, urban_discharge, groundwater_abstraction]
+    first_action_contains: "Draft notice"
+  - id: fertiliser_renewal_increases_nutrient_load
+    signal_contains: "fertiliser application plan"
+    expect_supported: [increases_nutrient_load]
+    expect_rejected: [no_material_effect, increases_abstraction]
+    first_action_contains: "Draft objection"
+  - id: residential_plan_no_material_effect
+    signal_contains: "Residential development plan"
+    expect_supported: [no_material_effect]
+    expect_rejected: [increases_nutrient_load, increases_abstraction]
+    first_action_contains: "No objection"
   - id: warm_run
     warm: true

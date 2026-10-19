@@ -1,0 +1,5 @@
+parameter,limit_value,direction,legal_basis
+nitrate_mg_l,1.5,above,Ley 3/2020 de recuperación y protección del Mar Menor (Región de Murcia); Ley 19/2022 art. 2 (right to protection)
+chlorophyll_ug_l,10.0,above,Ley 3/2020 Mar Menor; WFD good ecological status
+dissolved_oxygen_mg_l,4.0,below,WFD good ecological status (Directive 2000/60/EC)
+salinity,,none,

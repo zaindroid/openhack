@@ -1,0 +1,5 @@
+permit_id,holder,kind,volume,unit,distance_km,status,expiry
+P1,Agro Campo 7 SL,fertiliser_plan,1200,t_nitrogen_year,4.0,renewal_pending,2026-12-31
+P2,Comunidad de Regantes Arco Sur,abstraction,850000,m3_year,7.0,active,2028-06-30
+P3,EDAR Los Alcázares,discharge,2100000,m3_year,3.0,active,2029-01-31
+P4,Finca Norte,abstraction,300000,m3_year,21.0,active,2027-03-31
