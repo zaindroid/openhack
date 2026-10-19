@@ -83,7 +83,8 @@ class DataAccess:
             n += 1
         if os.path.exists(settings.schema_file):
             with open(settings.schema_file) as f:
-                for stmt in [s.strip() for s in f.read().split(";") if s.strip()]:
+                for raw in f.read().split(";"):
+                    stmt = "\n".join(l for l in raw.splitlines() if not l.strip().startswith("--")).strip()
                     if stmt.upper().startswith(("CREATE OR REPLACE VIEW", "CREATE VIEW")):
                         try:
                             self._duck.execute(stmt)
