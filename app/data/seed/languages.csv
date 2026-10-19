@@ -1,0 +1,31 @@
+glottocode,name,family,country,region,lat,lon,speakers,speakers_year,median_speaker_age,endangerment,intergenerational_transmission
+illu0001,Language A (Andes),Isolate,Peru,Americas,-13.52,-71.97,40,2024,72,critically,false
+illu0002,Language B (Highland New Guinea),Trans-New Guinea,Papua New Guinea,Oceania,-5.86,144.23,120,2023,65,critically,false
+illu0003,Language C (Sahel),Nilo-Saharan,Chad,Africa,13.45,18.73,300,2022,60,severely,false
+illu0004,Language D (Baltic coast),Uralic,Latvia,Europe,57.31,22.15,5000,2023,48,vulnerable,true
+illu0005,Language E (Amazon lowland),Tupian,Brazil,Americas,-7.12,-60.02,210,2023,58,severely,false
+illu0006,Language F (Rift Valley),Afro-Asiatic,Tanzania,Africa,-3.37,35.75,450,2021,55,severely,true
+illu0007,Language G (Siberian taiga),Tungusic,Russia,Asia,62.03,129.73,80,2022,70,critically,false
+illu0008,Language H (Sepik river),Sepik,Papua New Guinea,Oceania,-4.21,143.14,380,2023,52,definitely,true
+illu0009,Language I (Western Ghats),Dravidian,India,Asia,11.41,76.70,1200,2022,50,definitely,true
+illu0010,Language J (Gran Chaco),Matacoan,Argentina,Americas,-24.78,-60.59,260,2024,61,severely,false
+illu0011,Language K (Kalahari margin),Khoe-Kwadi,Botswana,Africa,-21.17,21.65,150,2023,68,critically,false
+illu0012,Language L (Vanuatu islands),Austronesian,Vanuatu,Oceania,-16.25,167.50,900,2023,45,definitely,true
+illu0013,Language M (Hindu Kush),Indo-Iranian,Pakistan,Asia,35.92,71.80,2500,2022,47,vulnerable,true
+illu0014,Language N (Pacific Northwest),Salishan,Canada,Americas,50.12,-122.95,30,2024,76,critically,false
+illu0015,Language O (Ethiopian highlands),Afro-Asiatic,Ethiopia,Africa,10.33,38.62,620,2021,54,definitely,true
+illu0016,Language P (Mekong delta),Austroasiatic,Vietnam,Asia,10.03,105.78,480,2023,57,severely,false
+illu0017,Language Q (Torres Strait),Pama-Nyungan,Australia,Oceania,-10.58,142.21,220,2023,63,severely,false
+illu0018,Language R (Mesoamerican highlands),Oto-Manguean,Mexico,Americas,17.07,-96.72,3200,2022,49,vulnerable,true
+illu0019,Language S (Congo basin),Niger-Congo,Democratic Republic of the Congo,Africa,0.52,25.19,700,2020,51,definitely,true
+illu0020,Language T (Caucasus),Nakh-Daghestanian,Russia,Asia,42.73,46.74,1800,2023,46,vulnerable,true
+illu0021,Language U (Patagonian steppe),Chonan,Chile,Americas,-45.57,-72.07,12,2024,80,critically,false
+illu0022,Language V (Lake Victoria shore),Niger-Congo,Uganda,Africa,0.06,33.21,2200,2022,44,vulnerable,true
+illu0023,Language W (Borneo interior),Austronesian,Malaysia,Asia,3.17,115.08,340,2023,59,severely,false
+illu0024,Language X (Solomon Sea),Austronesian,Solomon Islands,Oceania,-9.43,159.95,160,2023,66,critically,false
+illu0025,Language Y (Guiana shield),Cariban,Suriname,Americas,3.94,-56.03,410,2022,56,severely,true
+illu0026,Language Z (Atlas mountains),Afro-Asiatic,Morocco,Africa,31.63,-7.99,8000,2023,42,vulnerable,true
+illu0027,Language AA (Hokkaido coast),Isolate,Japan,Asia,43.06,141.35,15,2024,78,critically,false
+illu0028,Language AB (Arnhem Land),Gunwinyguan,Australia,Oceania,-12.46,134.21,95,2023,69,critically,false
+illu0029,Language AC (Great Basin),Uto-Aztecan,United States,Americas,39.53,-119.81,60,2024,74,critically,false
+illu0030,Language AD (Zambezi valley),Niger-Congo,Zambia,Africa,-15.42,28.28,1500,2022,53,definitely,true

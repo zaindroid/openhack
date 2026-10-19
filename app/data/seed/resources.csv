@@ -1,0 +1,80 @@
+glottocode,kind,amount,year,archive,open_access
+illu0001,audio_hours,3,2009,ELAR,true
+illu0001,dictionary_entries,800,2011,ELAR,true
+illu0001,grammar_pages,40,2011,ELAR,true
+illu0002,audio_hours,30,2018,PARADISEC,true
+illu0002,video_hours,6,2018,PARADISEC,true
+illu0002,dictionary_entries,1500,2019,PARADISEC,true
+illu0002,grammar_pages,120,2020,PARADISEC,true
+illu0003,audio_hours,80,2015,,false
+illu0003,video_hours,12,2016,,false
+illu0003,dictionary_entries,2200,2017,,false
+illu0003,grammar_pages,210,2017,,false
+illu0004,audio_hours,400,2020,National archive,true
+illu0004,dictionary_entries,25000,2019,National archive,true
+illu0004,grammar_pages,600,2015,National archive,true
+illu0004,text_corpus_words,1200000,2021,National archive,true
+illu0005,audio_hours,22,2019,AILLA,true
+illu0005,dictionary_entries,900,2019,AILLA,true
+illu0006,audio_hours,48,2017,ELAR,true
+illu0006,dictionary_entries,3100,2018,ELAR,true
+illu0006,grammar_pages,260,2018,ELAR,true
+illu0007,audio_hours,41,2012,ELAR,true
+illu0007,video_hours,9,2012,ELAR,true
+illu0007,dictionary_entries,4000,2014,ELAR,true
+illu0007,grammar_pages,300,2014,ELAR,true
+illu0008,audio_hours,14,2021,PARADISEC,true
+illu0008,dictionary_entries,700,2021,PARADISEC,true
+illu0009,audio_hours,60,2016,University repository,true
+illu0009,dictionary_entries,9000,2016,University repository,true
+illu0010,audio_hours,18,2020,AILLA,true
+illu0010,dictionary_entries,1100,2020,AILLA,true
+illu0011,audio_hours,44,2019,ELAR,true
+illu0011,dictionary_entries,2600,2019,ELAR,true
+illu0011,grammar_pages,180,2020,ELAR,true
+illu0012,audio_hours,35,2018,PARADISEC,true
+illu0012,dictionary_entries,2000,2018,PARADISEC,true
+illu0013,audio_hours,70,2015,University repository,true
+illu0013,dictionary_entries,12000,2015,University repository,true
+illu0014,audio_hours,47,2010,First Nations archive,true
+illu0014,video_hours,20,2010,First Nations archive,true
+illu0014,dictionary_entries,6000,2012,First Nations archive,true
+illu0014,grammar_pages,350,2012,First Nations archive,true
+illu0015,audio_hours,26,2019,ELAR,true
+illu0015,dictionary_entries,1800,2019,ELAR,true
+illu0016,audio_hours,20,2017,,false
+illu0016,dictionary_entries,1300,2017,University repository,true
+illu0017,audio_hours,38,2016,AIATSIS,true
+illu0017,dictionary_entries,2900,2016,AIATSIS,true
+illu0018,audio_hours,150,2018,AILLA,true
+illu0018,dictionary_entries,15000,2018,AILLA,true
+illu0019,audio_hours,16,2014,ELAR,true
+illu0019,dictionary_entries,1000,2014,ELAR,true
+illu0020,audio_hours,55,2019,University repository,true
+illu0020,dictionary_entries,8000,2019,University repository,true
+illu0021,audio_hours,45,2004,AILLA,true
+illu0021,video_hours,8,2004,AILLA,true
+illu0021,dictionary_entries,3500,2006,AILLA,true
+illu0021,grammar_pages,280,2006,AILLA,true
+illu0022,audio_hours,90,2020,University repository,true
+illu0022,dictionary_entries,11000,2020,University repository,true
+illu0023,audio_hours,24,2018,PARADISEC,true
+illu0023,dictionary_entries,1700,2018,PARADISEC,true
+illu0024,audio_hours,42,2021,PARADISEC,true
+illu0024,dictionary_entries,2400,2021,PARADISEC,true
+illu0025,audio_hours,29,2019,AILLA,true
+illu0025,dictionary_entries,2100,2019,AILLA,true
+illu0026,audio_hours,300,2021,National archive,true
+illu0026,dictionary_entries,30000,2021,National archive,true
+illu0027,audio_hours,49,2008,National archive,true
+illu0027,video_hours,30,2008,National archive,true
+illu0027,dictionary_entries,7000,2010,National archive,true
+illu0027,grammar_pages,400,2010,National archive,true
+illu0028,audio_hours,46,2017,AIATSIS,true
+illu0028,dictionary_entries,3300,2017,AIATSIS,true
+illu0028,grammar_pages,240,2018,AIATSIS,true
+illu0029,audio_hours,43,2015,University repository,true
+illu0029,video_hours,11,2015,University repository,true
+illu0029,dictionary_entries,5200,2016,University repository,true
+illu0030,audio_hours,65,2018,University repository,true
+illu0030,dictionary_entries,9500,2018,University repository,true
