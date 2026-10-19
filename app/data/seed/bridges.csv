@@ -1,0 +1,41 @@
+structure_id,name,state,county,lat,lon,year_built,year_reconstructed,design_life_years,deck_rating,superstructure_rating,substructure_rating,scour_critical,adt,adt_year,last_inspection,inspection_interval_months,material,posted_load_limit,replacement_cost_usd
+PA-AL-0001,Mon Valley Crossing,PA,Allegheny,40.428,-79.973,1962,,50,4,5,3,false,18400,2019,2022-01-14,24,steel truss,false,42000000
+PA-WA-0002,Chartiers Creek Span,PA,Washington,40.205,-80.212,1998,,75,4,6,5,true,9600,2021,2026-03-02,24,prestressed concrete,false,11000000
+PA-AL-0003,Turtle Creek Viaduct,PA,Allegheny,40.412,-79.826,1971,1994,50,5,4,5,false,24100,2015,2025-11-20,24,steel,false,58000000
+PA-WE-0004,North Ridge Bridge,PA,Westmoreland,40.368,-79.617,1982,,75,8,6,8,false,20149,2022,2025-01-03,24,prestressed concrete,false,10000000
+PA-WE-0005,North Hollow Bridge,PA,Westmoreland,40.325,-79.475,2013,,100,8,7,6,true,20109,2021,2025-03-23,24,steel truss,false,13000000
+PA-WA-0006,South Run Bridge,PA,Washington,40.28,-80.299,1984,,75,7,6,7,false,20582,2021,2025-08-18,24,steel,false,15000000
+PA-AL-0007,East Creek Bridge,PA,Allegheny,40.519,-79.954,2010,,75,8,6,8,false,2301,2024,2025-05-03,24,prestressed concrete,false,30000000
+PA-AL-0008,East Mill Bridge,PA,Allegheny,40.429,-79.89,1999,,75,7,7,6,false,3139,2023,2025-09-24,24,prestressed concrete,false,8000000
+PA-WA-0009,East Ferry Bridge,PA,Washington,40.287,-80.208,1999,,100,6,8,7,false,8305,2019,2026-07-09,24,steel,false,9000000
+PA-WE-0010,South Station Bridge,PA,Westmoreland,40.347,-79.571,1995,,100,7,6,7,false,8881,2024,2026-07-19,24,steel truss,false,14000000
+PA-AL-0011,Old Church Bridge,PA,Allegheny,40.438,-79.913,1983,,75,6,8,6,true,20343,2019,2026-07-20,24,steel truss,false,19000000
+PA-WA-0012,North Orchard Bridge,PA,Washington,40.213,-80.366,2010,,100,7,8,7,false,10417,2022,2025-08-01,24,concrete,false,19000000
+PA-AL-0013,North Quarry Bridge,PA,Allegheny,40.529,-80.05,2007,,100,8,8,6,false,13052,2020,2025-06-16,24,steel,false,6000000
+PA-WA-0014,South Forge Bridge,PA,Washington,40.064,-80.137,1994,,75,6,8,7,false,18255,2020,2025-08-18,24,prestressed concrete,false,11000000
+PA-WE-0015,West Landing Bridge,PA,Westmoreland,40.421,-79.411,2013,,100,8,6,8,false,13874,2024,2026-08-17,24,steel truss,false,6000000
+PA-AL-0016,North Grove Bridge,PA,Allegheny,40.401,-79.964,1989,,75,8,6,6,false,21479,2019,2025-02-02,24,concrete,false,5000000
+PA-WE-0017,East Summit Bridge,PA,Westmoreland,40.351,-79.626,1990,,75,8,8,8,true,8762,2022,2026-04-04,24,steel,false,24000000
+PA-WA-0018,West Meadow Bridge,PA,Washington,40.149,-80.141,1997,,75,8,8,8,false,2786,2022,2026-02-08,24,prestressed concrete,false,9000000
+PA-WE-0019,South Junction Bridge,PA,Westmoreland,40.291,-79.606,2003,,75,6,7,8,false,2457,2024,2025-02-25,24,prestressed concrete,false,8000000
+PA-WA-0020,West Bend Bridge,PA,Washington,40.101,-80.28,2006,,75,6,7,6,true,9490,2022,2026-07-23,24,steel truss,false,7000000
+PA-AL-0021,South Falls Bridge,PA,Allegheny,40.552,-79.966,1993,,100,6,8,7,false,2443,2023,2026-09-28,24,prestressed concrete,false,4000000
+PA-WE-0022,South Terrace Bridge,PA,Westmoreland,40.206,-79.67,1980,,75,7,6,8,false,19770,2023,2025-02-14,24,concrete,false,11000000
+PA-AL-0023,South Point Bridge,PA,Allegheny,40.384,-80.101,1995,,100,7,7,7,false,1105,2022,2025-02-18,24,prestressed concrete,false,19000000
+PA-WA-0024,East Harbor Bridge,PA,Washington,40.261,-80.136,1983,,75,7,6,7,false,20843,2024,2025-09-10,24,steel,false,7000000
+PA-WA-0025,North Narrows Bridge,PA,Washington,40.228,-80.353,1982,,75,8,6,8,false,7471,2024,2026-09-16,24,concrete,false,30000000
+PA-AL-0026,New Heights Bridge,PA,Allegheny,40.422,-80.057,1980,,75,7,6,8,false,6094,2024,2026-09-23,24,steel truss,false,20000000
+PA-AL-0027,North Gap Bridge,PA,Allegheny,40.547,-79.933,1982,,75,8,6,7,false,14883,2020,2025-05-12,24,steel,false,14000000
+PA-AL-0028,New Crossing Bridge,PA,Allegheny,40.345,-79.906,1990,,75,8,8,6,false,6124,2020,2026-01-06,24,concrete,false,28000000
+PA-WA-0029,East Fork Bridge,PA,Washington,40.088,-80.19,1990,,75,6,7,6,false,15883,2021,2026-04-08,24,steel,false,24000000
+PA-AL-0030,East Valley Bridge,PA,Allegheny,40.387,-80.119,2000,,75,7,8,8,true,18370,2021,2025-02-09,24,prestressed concrete,false,21000000
+PA-WA-0031,North Island Bridge,PA,Washington,40.193,-80.296,1977,,75,7,8,8,false,13422,2023,2025-05-02,24,steel truss,false,3000000
+PA-WE-0032,New Park Bridge,PA,Westmoreland,40.363,-79.467,2009,,100,6,7,7,false,11619,2023,2026-02-24,24,concrete,false,19000000
+PA-WA-0033,East Trestle Bridge,PA,Washington,40.147,-80.311,2001,,75,6,7,8,true,6502,2023,2026-07-18,24,steel,false,12000000
+PA-WA-0034,West Overpass Bridge,PA,Washington,40.239,-80.218,1988,,75,7,7,7,false,17550,2022,2025-02-10,24,concrete,false,5000000
+PA-AL-0035,South Bypass Bridge,PA,Allegheny,40.514,-80.096,1994,,75,6,7,8,false,15723,2022,2025-07-16,24,steel truss,false,10000000
+PA-AL-0036,New Parkway Bridge,PA,Allegheny,40.321,-79.915,2016,,75,7,6,6,true,2445,2023,2025-02-15,24,prestressed concrete,false,28000000
+PA-WA-0037,Old Boulevard Bridge,PA,Washington,40.193,-80.115,2008,,75,8,8,8,true,18752,2022,2025-08-15,24,concrete,false,27000000
+PA-AL-0038,East Avenue Bridge,PA,Allegheny,40.504,-79.984,2015,,100,6,7,7,false,10162,2020,2026-06-11,24,steel,false,7000000
+PA-AL-0039,West Road Bridge,PA,Allegheny,40.487,-79.928,1989,,75,7,7,7,true,14424,2019,2025-07-13,24,steel,false,30000000
+PA-WE-0040,West Lane Bridge,PA,Westmoreland,40.191,-79.584,1999,,75,7,8,8,false,16798,2020,2026-07-16,24,steel,false,15000000

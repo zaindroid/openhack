@@ -1,12 +1,28 @@
+# Deterministic checks for the illustrative seed. AS_OF defaults to 2026-10-20 (env AS_OF overrides).
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: mon_valley_age_and_overdue
+    signal_contains: "Mon Valley Crossing"
+    expect_supported: [age_past_design_life, deferred_inspection]
+    expect_rejected: [scour_flood_exposure, overload_traffic_growth]
+    first_action_contains: "post"
+  - id: chartiers_scour
+    signal_contains: "Chartiers Creek Span"
+    expect_supported: [scour_flood_exposure]
+    expect_rejected: [age_past_design_life, deferred_inspection, overload_traffic_growth]
+    first_action_contains: "scour"
+  - id: turtle_creek_overload
+    signal_contains: "Turtle Creek Viaduct"
+    expect_supported: [overload_traffic_growth]
+    expect_rejected: [age_past_design_life, scour_flood_exposure, deferred_inspection]
+    first_action_contains: "post"
+  - id: loyalhanna_no_eap
+    signal_contains: "Loyalhanna Ridge Dam"
+    expect_supported: [hazard_without_eap, age]
+    expect_rejected: [deferred_inspection, flood_exposure]
+    first_action_contains: "emergency action plan"
+  - id: beaver_run_has_eap
+    signal_contains: "Beaver Run Reservoir Dam"
+    expect_supported: [age]
+    expect_rejected: [hazard_without_eap, deferred_inspection]
   - id: warm_run
     warm: true

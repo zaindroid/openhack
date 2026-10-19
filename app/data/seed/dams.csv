@@ -1,0 +1,9 @@
+dam_id,name,lat,lon,year_completed,hazard_class,condition,last_inspection,population_downstream,eap_present,replacement_cost_usd
+PA-D-0001,Loyalhanna Ridge Dam,40.305,-79.395,1958,high,poor,2025-06-10,4200,false,35000000
+PA-D-0002,Beaver Run Reservoir Dam,40.395,-79.62,1951,high,poor,2026-02-18,2600,true,28000000
+PA-D-0003,Peters Lake Dam,40.27,-80.09,1991,significant,satisfactory,2026-04-01,900,true,9000000
+PA-D-0004,North Park Lake Dam,40.6,-80.01,2003,high,satisfactory,2025-10-05,6100,true,21000000
+PA-D-0005,Mingo Creek Dam,40.215,-80.03,1988,low,fair,2025-08-22,40,false,4000000
+PA-D-0006,Yough Headwater Dam,40.23,-79.59,1996,significant,fair,2026-01-12,700,true,12000000
+PA-D-0007,Deer Lakes Dam,40.62,-79.8,2010,low,satisfactory,2026-05-30,15,true,3000000
+PA-D-0008,Raccoon Creek Dam,40.5,-80.42,1979,significant,satisfactory,2025-12-15,1100,true,8000000
