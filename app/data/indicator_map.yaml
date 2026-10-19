@@ -1,0 +1,29 @@
+# indicator -> the code each source uses. Fetchers read this; add an indicator = add a block.
+# definition_id names the row in definitions.csv the fetched figures carry.
+countries: [DE, FR, ES, IT, NL, PL]
+years: [2022, 2023, 2024]
+indicators:
+  unemployment_rate:
+    unit: pct
+    eurostat:  { dataset: une_rt_a, filters: { age: Y15-74, sex: T, unit: PC_ACT }, definition_id: D_UNEMP_EUROSTAT }
+    worldbank: { indicator: SL.UEM.TOTL.ZS, definition_id: D_UNEMP_WB }
+    un:        { series: SL_TLF_UEM, dimensions: { age: "15+", sex: BOTHSEX }, definition_id: D_UNEMP_UN }
+  gdp_growth:
+    unit: pct
+    eurostat:  { dataset: nama_10_gdp, filters: { unit: CLV_PCH_PRE, na_item: B1GQ }, definition_id: D_GDP_EUROSTAT }
+    worldbank: { indicator: NY.GDP.MKTP.KD.ZG, definition_id: D_GDP_WB }
+    un:        { series: null, note: "UN NAMA growth rates are in the UNdata API (SNAAMA), not the SDG API", definition_id: D_GDP_UN }
+  population:
+    unit: persons
+    eurostat:  { dataset: demo_pjan, filters: { age: TOTAL, sex: T }, definition_id: D_POP_EUROSTAT }
+    worldbank: { indicator: SP.POP.TOTL, definition_id: D_POP_WB }
+    un:        { series: null, note: "World Population Prospects CSV download (population.un.org/wpp)", definition_id: D_POP_UN }
+  co2_emissions:
+    eurostat:  { dataset: env_air_gge, filters: { airpol: CO2, src_crf: TOTX4_MEMONIA, unit: THS_T }, unit: kt, definition_id: D_CO2_EUROSTAT }
+    worldbank: { indicator: EN.GHG.CO2.PC.CE.AR5, unit: t_per_capita, definition_id: D_CO2_WB }
+    un:        { series: null, note: "UNFCCC inventory totals via di.unfccc.int", unit: kt, definition_id: D_CO2_UN }
+  inflation:
+    unit: pct
+    eurostat:  { dataset: prc_hicp_aind, filters: { unit: RCH_A_AVG, coicop: CP00 }, definition_id: D_INFL_EUROSTAT }
+    worldbank: { indicator: FP.CPI.TOTL.ZG, definition_id: D_INFL_WB }
+    un:        { series: null, note: "UNdata CPI (ILO/IMF source); flag provisional rows via the footnote field", definition_id: D_INFL_UN }

@@ -1,0 +1,23 @@
+definition_id,source,indicator,definition_text,base_year,coverage_note,revision_policy
+D_UNEMP_EUROSTAT,eurostat,unemployment_rate,"ILO definition from the EU Labour Force Survey, persons 15-74 without work, available and actively seeking",,resident population,monthly series revised with each LFS wave
+D_UNEMP_WB,worldbank,unemployment_rate,"ILO modelled estimate, share of labour force without work and seeking (ILOSTAT)",,resident population,annual model re-estimated each November
+D_UNEMP_UN,un,unemployment_rate,"ILO modelled estimate reported for SDG indicator 8.5.2",,resident population,annual update with the SDG database
+D_UNEMP_NAT_DE,national,unemployment_rate,"Registered unemployed at the Federal Employment Agency as a share of the civilian labour force",,registered jobseekers only,monthly administrative count
+D_UNEMP_NAT_ILO,national,unemployment_rate,"ILO definition from the national labour force survey",,resident population,quarterly revisions
+D_GDP_EUROSTAT,eurostat,gdp_growth,"Real GDP growth, chain-linked volumes at constant prices, ESA 2010",2015,whole economy,"revised at t+60 days, t+1 year and benchmark revisions"
+D_GDP_WB,worldbank,gdp_growth,"GDP growth at constant 2015 US dollars",2015,whole economy,annual snapshot from national accounts as received
+D_GDP_UN,un,gdp_growth,"GDP growth at constant 2015 prices (UN National Accounts Main Aggregates)",2015,whole economy,annual snapshot
+D_GDP_NAT_DE_CURRENT,national,gdp_growth,"GDP growth at current prices (nominal) as published in the first annual release",,whole economy,first release then annual revision
+D_GDP_NAT_CONST,national,gdp_growth,"Real GDP growth, chain-linked volumes at constant prices",2015,whole economy,"first release, then revised with the annual benchmark"
+D_POP_EUROSTAT,eurostat,population,"Usually resident population on 1 January",,includes overseas departments (DROM) for France,annual
+D_POP_WB,worldbank,population,"Mid-year de facto population, World Bank estimate",,includes overseas departments (DROM) for France,annual
+D_POP_UN,un,population,"Mid-year de facto population estimate, World Population Prospects",,includes overseas departments (DROM) for France,biennial revision
+D_POP_NAT_FR,national,population,"Usually resident population on 1 January (INSEE)",,"metropolitan France only, excludes overseas departments",annual
+D_POP_NAT,national,population,"Usually resident population on 1 January",,whole national territory,annual
+D_CO2_WB,worldbank,co2_emissions,"Fossil CO2 emissions, metric tonnes per capita (EDGAR)",,national territory,annual
+D_CO2_UN,un,co2_emissions,"Fossil CO2 emissions, total kilotonnes (UNFCCC inventory)",,national territory,annual inventory resubmission
+D_CO2_EUROSTAT,eurostat,co2_emissions,"Fossil CO2 emissions, total kilotonnes (EEA inventory)",,national territory,annual
+D_INFL_EUROSTAT,eurostat,inflation,"Consumer price index, annual average rate of change (HICP)",,resident households,final once the year closes
+D_INFL_WB,worldbank,inflation,"Consumer price index, annual average rate of change",,resident households,annual
+D_INFL_UN,un,inflation,"Consumer price index, annual average rate of change; latest year is a provisional estimate",,"resident households; provisional estimate for the latest year",provisional until the national final release
+D_INFL_NAT,national,inflation,"Consumer price index, annual average rate of change (national CPI)",,resident households,final once the year closes

@@ -1,0 +1,6 @@
+indicator,label,unit_default,tolerance_pct,min_abs_gap,weight
+unemployment_rate,Unemployment rate,pct,10,0.3,1.0
+gdp_growth,Real GDP growth,pct,15,0.5,1.2
+population,Population,persons,2,0,6.0
+co2_emissions,CO2 emissions,kt,10,0,1.0
+inflation,Inflation (annual average),pct,10,0.3,1.0

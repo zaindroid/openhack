@@ -1,12 +1,30 @@
+# python -m whycore.evals app/evals.yaml   (default MAX_SIGNALS=5 covers these five; MAX_SIGNALS=6 also surfaces the
+# NL unemployment case where every documented explanation is rejected and `unexplained` is supported)
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: co2_de_2022_unit_scale
+    signal_contains: "CO2 emissions DE 2022"
+    expect_supported: [unit_or_scale]
+    expect_rejected: [definition_difference, coverage_difference, reporting_lag, unexplained]
+    first_action_contains: "agree once converted"
+  - id: unemployment_de_2024_registered_vs_ilo
+    signal_contains: "Unemployment rate DE 2024"
+    expect_supported: [definition_difference]
+    expect_rejected: [base_year_or_revision, unit_or_scale, coverage_difference, reporting_lag, unexplained]
+    first_action_contains: "World Bank"
+  - id: gdp_it_2022_vintage_revision
+    signal_contains: "Real GDP growth IT 2022"
+    expect_supported: [base_year_or_revision]
+    expect_rejected: [definition_difference, unit_or_scale, coverage_difference, reporting_lag, unexplained]
+    first_action_contains: "Eurostat"
+  - id: inflation_es_2024_provisional
+    signal_contains: "Inflation (annual average) ES 2024"
+    expect_supported: [reporting_lag]
+    expect_rejected: [definition_difference, base_year_or_revision, unit_or_scale, coverage_difference, unexplained]
+    first_action_contains: "national office"
+  - id: population_fr_2023_overseas_coverage
+    signal_contains: "Population FR 2023"
+    expect_supported: [coverage_difference]
+    expect_rejected: [definition_difference, base_year_or_revision, unit_or_scale, reporting_lag, unexplained]
+    first_action_contains: "Eurostat"
   - id: warm_run
     warm: true
