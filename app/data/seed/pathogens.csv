@@ -1,0 +1,5 @@
+pathogen,zoonotic,note
+Escherichia coli,false,mostly human-to-human in surveillance series; food-chain ESBL contribution is debated and not assumed here
+Klebsiella pneumoniae,false,healthcare-associated
+Salmonella spp.,true,food-chain pathogen; poultry and pig reservoirs
+Staphylococcus aureus,false,livestock-associated clones exist but are a minority in these series

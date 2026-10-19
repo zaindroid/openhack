@@ -1,12 +1,29 @@
+# Deterministic checks on the illustrative seed. python -m whycore.evals app/evals.yaml
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: de_ecoli_cephalosporins_prescribing
+    signal_contains: "DE · Escherichia coli vs 3rd-gen cephalosporins"
+    expect_supported: [human_prescribing]
+    expect_rejected: [livestock_use, surveillance_artifact, importation, unexplained]
+    first_action_contains: "Stewardship review"
+  - id: pl_salmonella_fluoroquinolones_livestock
+    signal_contains: "PL · Salmonella spp. vs fluoroquinolones"
+    expect_supported: [livestock_use]
+    expect_rejected: [human_prescribing, surveillance_artifact, unexplained]
+    first_action_contains: "Veterinary use review"
+  - id: it_klebsiella_carbapenems_surveillance_artifact
+    signal_contains: "IT · Klebsiella pneumoniae vs carbapenems"
+    expect_supported: [surveillance_artifact]
+    expect_rejected: [human_prescribing, livestock_use, importation, unexplained]
+    first_action_contains: "Audit"
+  - id: fr_klebsiella_cephalosporins_unexplained
+    signal_contains: "FR · Klebsiella pneumoniae vs 3rd-gen cephalosporins"
+    expect_supported: [unexplained]
+    expect_rejected: [human_prescribing, livestock_use, surveillance_artifact, importation]
+    first_action_contains: "Field investigation"
+  - id: es_ecoli_carbapenems_importation
+    signal_contains: "ES · Escherichia coli vs carbapenems"
+    expect_supported: [importation]
+    expect_rejected: [human_prescribing, unexplained]
+    first_action_contains: "Travel"
   - id: warm_run
     warm: true
