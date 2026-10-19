@@ -1,0 +1,14 @@
+field,parent_field
+robotics,engineering
+control_engineering,engineering
+tribology,engineering
+computer_vision,computing
+machine_learning,computing
+geophysics,earth_science
+seismology,earth_science
+ecology,life_science
+evolutionary_biology,life_science
+epidemiology,health_science
+public_health,health_science
+materials_science,physical_science
+polymer_physics,physical_science

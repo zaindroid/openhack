@@ -1,0 +1,46 @@
+paper_id,title,field,year,cited_by_count,entities,abstract
+S1994,Stick-slip precursors in laboratory faults: acoustic emission before slip onset,seismology,1994,210,stick-slip;friction instability;precursor signal;acoustic emission;fault gouge;laboratory fault;slip onset,Laboratory faults loaded to failure show a reproducible rise in acoustic emission seconds before slip onset; the precursor signal scales with the friction instability.
+S1998,Rate-and-state friction and the nucleation of unstable slip,seismology,1998,340,rate-and-state friction;stick-slip;slip onset;laboratory fault;model,A rate-and-state friction law reproduces stick-slip cycles observed on laboratory faults.
+G1979,Crack arrest in brittle rock under confining pressure,geophysics,1979,95,crack arrest;fracture toughness;confining pressure;brittle fracture;rock,"Measured fracture toughness of brittle rock rises with confining pressure, producing crack arrest at depth."
+G2010,Friction instability of fault gouge at seismic slip rates,geophysics,2010,120,friction instability;fault gouge;stick-slip;earthquake;data,High-velocity friction experiments on fault gouge show a friction instability that controls stick-slip at seismic slip rates.
+G2015,Creep transients before earthquakes: a precursor signal in strain data,geophysics,2015,60,creep;precursor signal;earthquake;data;analysis,Strain data show creep transients that act as a precursor signal before some earthquakes.
+G1988,Seismic noise analysis for site characterisation,geophysics,1988,40,noise;analysis;data;earthquake,Ambient seismic noise is analysed to characterise sites.
+E1985,Metapopulation persistence of butterflies in fragmented habitat,ecology,1985,410,metapopulation;patch dynamics;rescue effect;extinction-recolonisation;habitat fragmentation;butterfly;dispersal,A metapopulation of butterflies persists through extinction-recolonisation among patches; the rescue effect raises patch occupancy where dispersal links patches.
+E1991,Patch dynamics and the rescue effect in island populations,ecology,1991,150,patch dynamics;rescue effect;dispersal;population;model,Island populations show patch dynamics in which immigration rescues small patches from extinction.
+E2019,Spatial models of extinction-recolonisation under climate shifts,ecology,2019,55,spatial model;extinction-recolonisation;metapopulation;dispersal;simulation,Spatial models show how extinction-recolonisation balances change under shifting climate.
+E2003,Self-organisation of vegetation patterns in arid systems,ecology,2003,300,self-healing;dynamics;model;system;simulation,Vegetation patterns self-organise; damaged patches recover (self-healing) through local feedbacks.
+V1996,Dispersal and the genetics of fragmented populations,evolutionary_biology,1996,80,dispersal;habitat fragmentation;population;data,Genetic data reveal dispersal across fragmented habitat.
+H2021,Metapopulation models for vaccine-preventable disease in connected cities,epidemiology,2021,30,metapopulation;spatial model;vaccination coverage;incidence;measles,Metapopulation spatial models link vaccination coverage to measles incidence across connected cities.
+H2016,Epidemic thresholds on contact networks,epidemiology,2016,200,epidemic threshold;contact network;network;model,Epidemic thresholds depend on contact network structure.
+H2009,Measles incidence and vaccination coverage in Europe,public_health,2009,90,measles;vaccination coverage;incidence;data,Surveillance data relate measles incidence to coverage.
+H2023,Noise in surveillance data and outbreak detection,epidemiology,2023,12,noise;data;analysis;incidence,Surveillance noise limits outbreak detection.
+R2020,Tactile sensing for grasp stability in soft manipulators,robotics,2020,70,tactile sensing;grasp;manipulator;sensor fusion;data,Tactile arrays estimate grasp stability on a soft manipulator.
+R2022,Learning slip onset from fingertip vibration,robotics,2022,45,slip onset;tactile sensing;grasp;transfer learning;data,A learned detector flags slip onset from fingertip vibration.
+R2018,Friction instability in robot joints: a tribological view,robotics,2018,25,friction instability;wear;manipulator;model,Joint friction instability is modelled from wear measurements.
+C2005,Robust estimation under model uncertainty,control_engineering,2005,500,robust estimation;model uncertainty;h-infinity;kalman filter;system,H-infinity and Kalman-type estimators are compared under model uncertainty.
+C1990,Kalman filtering with uncertain dynamics,control_engineering,1990,220,kalman filter;model uncertainty;dynamics;system,Kalman filters under uncertain dynamics.
+T2001,Stick-slip in lubricated sliding contacts,tribology,2001,130,stick-slip;lubrication;surface roughness;friction instability;wear,Lubricated contacts show stick-slip governed by surface roughness.
+V2020,Robust segmentation with uncertainty-aware estimation,computer_vision,2020,160,segmentation;robust estimation;model uncertainty;convolution;image,Segmentation networks with uncertainty-aware robust estimation.
+V2017,Attention for dense prediction,computer_vision,2017,900,attention;segmentation;image;convolution,Attention improves dense prediction.
+M2019,Transfer learning under domain shift,machine_learning,2019,700,transfer learning;domain shift;model;data,Transfer learning mitigates domain shift.
+M2012,Optimisation methods for deep networks,machine_learning,2012,1500,optimisation;network;model;data,Optimisation for deep networks.
+V2023,Segmentation under domain shift with noise-robust training,computer_vision,2023,40,segmentation;domain shift;noise;image;model,Noise-robust training for segmentation under domain shift.
+P2023,Friction instability in thin polymer films,polymer_physics,2023,8,friction instability;polymer film;stick-slip;glass transition;data,Thin polymer films show stick-slip friction instability near the glass transition.
+MS2015,Self-healing polymers with embedded microcapsules,materials_science,2015,420,self-healing;microcapsule;fatigue;microstructure,Microcapsules release healing agent at cracks.
+MS2008,Fracture toughness of ceramic composites,materials_science,2008,260,fracture toughness;ceramic composite;brittle fracture;microstructure,Toughness of ceramic composites.
+MS1998,Fatigue crack growth in metals: an analysis,materials_science,1998,180,fatigue;analysis;data;model,Fatigue crack growth analysed.
+P2006,Glass transition and creep in amorphous polymers,polymer_physics,2006,75,glass transition;creep;polymer film;dynamics,Creep near the glass transition.
+S2005,Earthquake catalogue analysis,seismology,2005,50,earthquake;data;analysis,Catalogue analysis.
+S1980,Laboratory fault mechanics,seismology,1980,140,laboratory fault;rock;stick-slip,Early laboratory fault work.
+E2012,Dispersal networks of pollinators,ecology,2012,60,dispersal;network;data,Pollinator dispersal networks.
+E1978,Population dynamics of island birds,ecology,1978,90,population;dynamics;dispersal,Island bird dynamics.
+H2018,Spatial model of dengue incidence,epidemiology,2018,70,spatial model;incidence;data,Dengue spatial model.
+R2015,Sensor fusion for mobile manipulators,robotics,2015,110,sensor fusion;manipulator;kalman filter,Fusion for manipulators.
+R2024,Contact-rich assembly with learned policies,robotics,2024,15,manipulator;grasp;transfer learning;simulation,Learned assembly policies.
+C2012,Model uncertainty in networked control,control_engineering,2012,90,model uncertainty;network;system,Networked control.
+V2015,Convolutional segmentation,computer_vision,2015,2000,segmentation;convolution;image,Fully convolutional segmentation.
+M2021,Attention under domain shift,machine_learning,2021,120,attention;domain shift;model,Attention and shift.
+MS2020,Microstructure and fatigue of additively manufactured alloys,materials_science,2020,95,microstructure;fatigue;data,AM alloy fatigue.
+G1995,Confining pressure and rock creep,geophysics,1995,45,confining pressure;creep;rock,Rock creep under pressure.
+T2014,Wear mapping of lubricated steels,tribology,2014,35,wear;lubrication;surface roughness,Wear maps.
+P2018,Polymer film adhesion,polymer_physics,2018,30,polymer film;surface roughness;data,Adhesion of films.

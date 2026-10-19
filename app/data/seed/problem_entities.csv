@@ -1,0 +1,30 @@
+problem_id,entity
+PR1,stick-slip
+PR1,friction instability
+PR1,precursor signal
+PR1,tactile sensing
+PR1,grasp
+PR1,slip onset
+PR1,data
+PR2,metapopulation
+PR2,patch dynamics
+PR2,rescue effect
+PR2,extinction-recolonisation
+PR2,vaccination coverage
+PR2,incidence
+PR2,measles
+PR2,model
+PR3,segmentation
+PR3,domain shift
+PR3,robust estimation
+PR3,model uncertainty
+PR3,image
+PR3,model
+PR3,data
+PR4,crack arrest
+PR4,fracture toughness
+PR4,self-healing
+PR4,ceramic composite
+PR4,brittle fracture
+PR4,microcapsule
+PR4,model

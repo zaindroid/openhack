@@ -1,0 +1,189 @@
+paper_id,entity
+S1994,stick-slip
+S1994,friction instability
+S1994,precursor signal
+S1994,acoustic emission
+S1994,fault gouge
+S1994,laboratory fault
+S1994,slip onset
+S1998,rate-and-state friction
+S1998,stick-slip
+S1998,slip onset
+S1998,laboratory fault
+S1998,model
+G1979,crack arrest
+G1979,fracture toughness
+G1979,confining pressure
+G1979,brittle fracture
+G1979,rock
+G2010,friction instability
+G2010,fault gouge
+G2010,stick-slip
+G2010,earthquake
+G2010,data
+G2015,creep
+G2015,precursor signal
+G2015,earthquake
+G2015,data
+G2015,analysis
+G1988,noise
+G1988,analysis
+G1988,data
+G1988,earthquake
+E1985,metapopulation
+E1985,patch dynamics
+E1985,rescue effect
+E1985,extinction-recolonisation
+E1985,habitat fragmentation
+E1985,butterfly
+E1985,dispersal
+E1991,patch dynamics
+E1991,rescue effect
+E1991,dispersal
+E1991,population
+E1991,model
+E2019,spatial model
+E2019,extinction-recolonisation
+E2019,metapopulation
+E2019,dispersal
+E2019,simulation
+E2003,self-healing
+E2003,dynamics
+E2003,model
+E2003,system
+E2003,simulation
+V1996,dispersal
+V1996,habitat fragmentation
+V1996,population
+V1996,data
+H2021,metapopulation
+H2021,spatial model
+H2021,vaccination coverage
+H2021,incidence
+H2021,measles
+H2016,epidemic threshold
+H2016,contact network
+H2016,network
+H2016,model
+H2009,measles
+H2009,vaccination coverage
+H2009,incidence
+H2009,data
+H2023,noise
+H2023,data
+H2023,analysis
+H2023,incidence
+R2020,tactile sensing
+R2020,grasp
+R2020,manipulator
+R2020,sensor fusion
+R2020,data
+R2022,slip onset
+R2022,tactile sensing
+R2022,grasp
+R2022,transfer learning
+R2022,data
+R2018,friction instability
+R2018,wear
+R2018,manipulator
+R2018,model
+C2005,robust estimation
+C2005,model uncertainty
+C2005,h-infinity
+C2005,kalman filter
+C2005,system
+C1990,kalman filter
+C1990,model uncertainty
+C1990,dynamics
+C1990,system
+T2001,stick-slip
+T2001,lubrication
+T2001,surface roughness
+T2001,friction instability
+T2001,wear
+V2020,segmentation
+V2020,robust estimation
+V2020,model uncertainty
+V2020,convolution
+V2020,image
+V2017,attention
+V2017,segmentation
+V2017,image
+V2017,convolution
+M2019,transfer learning
+M2019,domain shift
+M2019,model
+M2019,data
+M2012,optimisation
+M2012,network
+M2012,model
+M2012,data
+V2023,segmentation
+V2023,domain shift
+V2023,noise
+V2023,image
+V2023,model
+P2023,friction instability
+P2023,polymer film
+P2023,stick-slip
+P2023,glass transition
+P2023,data
+MS2015,self-healing
+MS2015,microcapsule
+MS2015,fatigue
+MS2015,microstructure
+MS2008,fracture toughness
+MS2008,ceramic composite
+MS2008,brittle fracture
+MS2008,microstructure
+MS1998,fatigue
+MS1998,analysis
+MS1998,data
+MS1998,model
+P2006,glass transition
+P2006,creep
+P2006,polymer film
+P2006,dynamics
+S2005,earthquake
+S2005,data
+S2005,analysis
+S1980,laboratory fault
+S1980,rock
+S1980,stick-slip
+E2012,dispersal
+E2012,network
+E2012,data
+E1978,population
+E1978,dynamics
+E1978,dispersal
+H2018,spatial model
+H2018,incidence
+H2018,data
+R2015,sensor fusion
+R2015,manipulator
+R2015,kalman filter
+R2024,manipulator
+R2024,grasp
+R2024,transfer learning
+R2024,simulation
+C2012,model uncertainty
+C2012,network
+C2012,system
+V2015,segmentation
+V2015,convolution
+V2015,image
+M2021,attention
+M2021,domain shift
+M2021,model
+MS2020,microstructure
+MS2020,fatigue
+MS2020,data
+G1995,confining pressure
+G1995,creep
+G1995,rock
+T2014,wear
+T2014,lubrication
+T2014,surface roughness
+P2018,polymer film
+P2018,surface roughness
+P2018,data

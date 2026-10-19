@@ -1,0 +1,63 @@
+entity,kind
+acoustic emission,method
+analysis,generic
+attention,method
+brittle fracture,mechanism
+butterfly,object
+ceramic composite,object
+confining pressure,object
+contact network,object
+convolution,method
+crack arrest,mechanism
+creep,mechanism
+data,generic
+dispersal,mechanism
+domain shift,mechanism
+dynamics,generic
+earthquake,object
+epidemic threshold,method
+extinction-recolonisation,mechanism
+fatigue,mechanism
+fault gouge,object
+fracture toughness,method
+friction instability,mechanism
+glass transition,mechanism
+grasp,object
+h-infinity,method
+habitat fragmentation,object
+image,object
+incidence,object
+kalman filter,method
+laboratory fault,object
+lubrication,object
+manipulator,object
+measles,object
+metapopulation,mechanism
+microcapsule,object
+microstructure,object
+model,generic
+model uncertainty,mechanism
+network,generic
+noise,generic
+optimisation,generic
+patch dynamics,mechanism
+polymer film,object
+population,generic
+precursor signal,method
+rate-and-state friction,method
+rescue effect,mechanism
+robust estimation,method
+rock,object
+segmentation,object
+self-healing,mechanism
+sensor fusion,method
+simulation,generic
+slip onset,mechanism
+spatial model,method
+stick-slip,mechanism
+surface roughness,object
+system,generic
+tactile sensing,method
+transfer learning,method
+vaccination coverage,object
+wear,mechanism

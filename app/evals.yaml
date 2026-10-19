@@ -1,12 +1,22 @@
+# Lazarus eval cases. Hypothesis ids are paper ids from app/data/seed/papers.csv (illustrative corpus).
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: slip_detection_bridged_by_seismology
+    signal_contains: "Slip detection"
+    expect_supported: [S1994]            # stick-slip precursor paper, 31 years older, uncited by robotics
+    expect_rejected: [G2010, P2023, S1998]   # cited (1 hop) · too recent (2 y) · cited (2 hops)
+    first_action_contains: "Read"
+  - id: measles_bridged_by_metapopulation_ecology
+    signal_contains: "measles"
+    expect_supported: [E1985]
+    expect_rejected: [E1991, E2019]      # 2-hop and 1-hop citation paths from epidemiology
+    first_action_contains: "Read"
+  - id: segmentation_has_no_real_bridge
+    signal_contains: "Robust segmentation"
+    expect_rejected: [C2005, MS1998]     # already cited · generic-word overlap only
+    first_action_contains: "Widen"
+  - id: crack_arrest_bridged_by_rock_mechanics
+    signal_contains: "Crack arrest"
+    expect_supported: [G1979]
+    expect_rejected: [E2003]             # one mechanism + one generic word is not a bridge
   - id: warm_run
     warm: true
