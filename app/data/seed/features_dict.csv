@@ -1,0 +1,14 @@
+feature,meaning,mitigates
+income_threshold,Eligibility capped by household income,
+means_test,Benefit scaled to verified household means,equity_harm
+income_verification,Income claims checked against tax records before payout,gaming
+budget_cap,Annual budget ceiling with automatic pause when reached,cost_overrun
+sunset_clause,Measure expires on a fixed date unless renewed,
+phased_rollout,Introduced in stages by region or cohort with review gates,take_up_shortfall
+outreach_programme,Funded information campaign and application support,take_up_shortfall
+enforcement_body,A named authority with inspection powers and staff,enforcement_gap
+penalty,Fines or sanctions for non-compliance,
+exemption_list,Explicit exemptions for defined groups,equity_harm
+digital_application,Online-only application or registration,
+market_review_clause,Mandatory review of price and supply effects after 12 months,unintended_market_effect
+installer_certification,Only certified installers or operators may deliver the measure,gaming

@@ -1,0 +1,4 @@
+draft_id,title,jurisdiction,year,policy_area,instrument,features
+D1,Heat Pump Grant Act 2027,DE,2027,building_energy,subsidy,income_threshold;digital_application;sunset_clause
+D2,E-scooter Parking and Speed Mandate,NL,2027,micromobility,mandate,sunset_clause;phased_rollout;penalty;enforcement_body
+D3,Platform Worker Presumption Act,ES,2027,platform_work,mandate,enforcement_body;penalty;digital_application

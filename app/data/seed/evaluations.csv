@@ -1,0 +1,43 @@
+eval_id,law_id,year,body,finding_type,magnitude,summary,url
+E01,L01,2023,Bundesrechnungshof,cost_overrun,high,Budget for 2022 exhausted within weeks; funding stop in January 2022 left applicants stranded,https://www.bundesrechnungshof.de/
+E02,L01,2023,Bundesrechnungshof,unintended_market_effect,medium,Subsidy rates tracked by installer quotes; price increases absorbed part of the grant,https://www.bundesrechnungshof.de/
+E03,L01,2024,BMWK evaluation,take_up_shortfall,low,Take-up strong among owner-occupiers; weak among landlords,https://www.bmwk.de/
+E04,L02,2022,Cour des comptes,gaming,medium,Fictitious or inflated works by intermediaries; recovery actions opened,https://www.ccomptes.fr/
+E05,L02,2022,Cour des comptes,equity_harm,low,Lowest-income households under-represented despite means test,https://www.ccomptes.fr/
+E06,L02,2023,ANAH,none,low,Processing times improved after 2021 reform,https://www.anah.gouv.fr/
+E07,L03,2023,National Audit Office,take_up_shortfall,high,Fewer than half of budgeted vouchers used in year one,https://www.nao.org.uk/
+E08,L03,2023,National Audit Office,equity_harm,medium,Grants flowed mainly to detached higher-value homes,https://www.nao.org.uk/
+E09,L03,2024,DESNZ evaluation,cost_overrun,low,Spend below budget because of low uptake,https://www.gov.uk/
+E10,L04,2019,Rijksdienst voor Ondernemend Nederland,gaming,low,Isolated cases of duplicate claims detected,https://www.rvo.nl/
+E11,L04,2019,Algemene Rekenkamer,none,low,Scheme broadly on budget; targets partly met,https://www.rekenkamer.nl/
+E12,L05,2023,Tribunal de Cuentas,take_up_shortfall,medium,Regional uptake uneven; several regions returned funds,https://www.tcu.es/
+E13,L05,2023,Tribunal de Cuentas,none,low,No material irregularities found,https://www.tcu.es/
+E14,L06,2023,Corte dei conti,gaming,high,Widespread fraudulent credits; billions in suspected irregular claims,https://www.corteconti.it/
+E15,L06,2023,Corte dei conti,cost_overrun,high,Cost exceeded initial estimate several times over,https://www.corteconti.it/
+E16,L06,2023,Banca d'Italia,unintended_market_effect,high,Construction price inflation and crowding-out of unsubsidised works,https://www.bancaditalia.it/
+E17,L08,2021,Public Accounts Committee,gaming,medium,Installer certification bottleneck exploited by unregistered intermediaries,https://committees.parliament.uk/
+E18,L08,2021,National Audit Office,take_up_shortfall,high,Scheme closed early after a fraction of planned installations,https://www.nao.org.uk/
+E19,L08,2021,National Audit Office,cost_overrun,low,Administration cost per voucher far above plan,https://www.nao.org.uk/
+E20,L21,2018,BMWi evaluation,cost_overrun,medium,Demand exceeded budget; scheme paused mid-year,https://www.bmwk.de/
+E21,L21,2018,BMWi evaluation,none,low,Emission savings per euro within target range,https://www.bmwk.de/
+E22,L25,2025,Algemene Rekenkamer,equity_harm,medium,Grants concentrated in high-income municipalities,https://www.rekenkamer.nl/
+E23,L25,2025,RVO,none,low,Budget cap triggered once; no overrun,https://www.rvo.nl/
+E24,L07,2025,European Court of Auditors,enforcement_gap,medium,Member-state reporting on beneficiaries incomplete,https://www.eca.europa.eu/
+E25,L09,2025,European Commission,none,low,Transposition ongoing; no ex-post findings yet,https://commission.europa.eu/
+E26,L10,2021,Cour des comptes,take_up_shortfall,medium,Municipal parking rules adopted by a minority of cities,https://www.ccomptes.fr/
+E27,L10,2022,CEREMA,equity_harm,medium,Pavement clutter reduced accessibility for blind and wheelchair users,https://www.cerema.fr/
+E28,L11,2021,BASt,enforcement_gap,high,Speed and pavement-riding rules rarely enforced; police capacity lacking,https://www.bast.de/
+E29,L11,2022,BMDV evaluation,unintended_market_effect,medium,Shift from rental to privately owned uninsured scooters,https://www.bmdv.bund.de/
+E30,L12,2022,Department for Transport,take_up_shortfall,medium,Several trial areas withdrew before the end date,https://www.gov.uk/
+E31,L12,2022,Department for Transport,equity_harm,medium,Access concentrated in city centres; disabled users reported obstruction,https://www.gov.uk/
+E32,L13,2023,DGT,enforcement_gap,medium,Fines issued in few municipalities; rules widely ignored,https://www.dgt.es/
+E33,L13,2023,Fundacion MAPFRE,unintended_market_effect,high,Rental operators exited mid-sized cities; private imports of non-compliant vehicles rose,https://www.fundacionmapfre.org/
+E34,L14,2024,Ville de Paris,unintended_market_effect,medium,Riders shifted to private scooters and bikes; injury rate flat,https://www.paris.fr/
+E35,L15,2024,Gemeente Amsterdam,enforcement_gap,medium,Permit conditions on parking rarely checked,https://www.amsterdam.nl/
+E36,L15,2024,Gemeente Amsterdam,none,low,Phased permits reduced fleet oversupply,https://www.amsterdam.nl/
+E37,L16,2023,Inspeccion de Trabajo,enforcement_gap,high,Platforms kept contractor models; inspections and fines did not change behaviour at scale,https://www.mites.gob.es/
+E38,L16,2023,CCOO,unintended_market_effect,high,One major platform left the market; others shifted to subcontracting,https://www.ccoo.es/
+E39,L18,2019,IGAS,enforcement_gap,medium,Disclosure duties met formally but not substantively,https://igas.gouv.fr/
+E40,L20,2022,BMAS evaluation,none,low,Coverage of couriers achieved; wage floor respected in sampled firms,https://www.bmas.de/
+E41,L22,2016,Ofgem,none,low,Means test with verification kept error and fraud below one percent,https://www.ofgem.gov.uk/
+E42,L22,2016,Ofgem,take_up_shortfall,low,Automatic enrolment raised uptake; residual gap among private renters,https://www.ofgem.gov.uk/

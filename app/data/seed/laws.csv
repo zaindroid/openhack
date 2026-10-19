@@ -1,0 +1,26 @@
+law_id,title,jurisdiction,year,policy_area,instrument,features
+L01,Federal Funding for Efficient Buildings (BEG),DE,2021,building_energy,subsidy,income_threshold;digital_application;budget_cap
+L02,MaPrimeRenov,FR,2020,building_energy,subsidy,income_threshold;means_test;digital_application
+L03,Boiler Upgrade Scheme,UK,2022,building_energy,subsidy,digital_application;sunset_clause;installer_certification
+L04,ISDE Sustainable Energy Investment Subsidy,NL,2016,building_energy,subsidy,income_threshold;sunset_clause;budget_cap
+L05,Plan Renove Ventanas y Calderas,ES,2021,building_energy,subsidy,digital_application;sunset_clause;exemption_list
+L06,Superbonus 110,IT,2020,building_energy,subsidy,sunset_clause;digital_application
+L07,Social Climate Fund building component,EU,2023,building_energy,subsidy,means_test;enforcement_body
+L08,Green Homes Grant,UK,2020,building_energy,subsidy,digital_application;sunset_clause;installer_certification
+L09,Energy Performance of Buildings Directive recast,EU,2024,building_energy,mandate,phased_rollout;exemption_list;enforcement_body
+L10,Mobility Orientation Law (LOM) micromobility rules,FR,2019,micromobility,mandate,penalty;enforcement_body;exemption_list
+L11,Small Electric Vehicles Ordinance (eKFV),DE,2019,micromobility,mandate,penalty;enforcement_body
+L12,Rental E-scooter Trials,UK,2020,micromobility,mandate,sunset_clause;phased_rollout
+L13,DGT Personal Mobility Vehicle Rules,ES,2021,micromobility,mandate,penalty;sunset_clause
+L14,Paris Rental E-scooter Ban,FR,2023,micromobility,ban,enforcement_body;penalty
+L15,Amsterdam Shared Scooter Permit Scheme,NL,2022,micromobility,mandate,phased_rollout;penalty;sunset_clause
+L16,Rider Law (Ley Rider),ES,2021,platform_work,mandate,enforcement_body;penalty
+L17,Platform Work Directive,EU,2024,platform_work,mandate,enforcement_body;digital_application
+L18,El Khomri Law platform provisions,FR,2016,platform_work,disclosure,digital_application
+L19,Deliveroo Collective Agreement Framework,NL,2023,platform_work,disclosure,exemption_list
+L20,Minimum Wage Act extension to couriers,DE,2020,platform_work,mandate,enforcement_body
+L21,Scrappage Premium for Old Boilers,DE,2016,building_energy,subsidy,income_threshold;digital_application;sunset_clause
+L22,Warm Homes Discount,UK,2011,building_energy,subsidy,means_test;income_verification
+L23,Micromobility Helmet Mandate,ES,2024,micromobility,mandate,penalty;enforcement_body;phased_rollout
+L24,Platform Transparency Act,DE,2025,platform_work,disclosure,digital_application;penalty
+L25,Heat Pump Boost Scheme,NL,2023,building_energy,subsidy,income_threshold;digital_application;budget_cap;installer_certification
