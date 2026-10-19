@@ -1,0 +1,13 @@
+# One service per branch. Default = DuckDB over the seed CSVs: no database needed, deploy anywhere.
+# Point it at the shared Zetaris on servingz with DATA_BACKEND=zetaris + ZETARIS_REST in .env.
+services:
+  app:
+    build: { context: .., dockerfile: Dockerfile }
+    container_name: ${APP_NAME:-whycore-app}
+    env_file: .env
+    environment:
+      APP_NAME: ${APP_NAME:-whycore-app}
+    volumes: ["memory:/srv/data/memory"]
+    ports: ["${APP_PORT:-8080}:8080"]
+    restart: unless-stopped
+volumes: { memory: {} }

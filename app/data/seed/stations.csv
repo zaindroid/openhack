@@ -1,0 +1,5 @@
+station_id,name,lat,lon,outage_hours_30d,pump_age_years,last_service_days,grid_faults_30d
+S1,Riverside,52.10,5.10,14,21,410,0
+S2,Mill Lane,52.20,5.30,2,4,30,0
+S3,Harbour,52.05,5.40,11,6,45,9
+S4,Polder North,52.30,5.20,0,12,120,1

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>explain-why agent</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#0b1d2e; --panel:#142c44; --line:#24405c; --text:#f4f1ea; --muted:#8fa3b8; --amber:#f2a541; --teal:#4cc9c0; --red:#e07a5f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font: 15px/1.45 "Public Sans", system-ui, Arial, sans-serif; }
+  header { padding:20px 28px; border-bottom:1px solid var(--line); display:flex; gap:20px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:24px; } header .q { color:var(--muted); }
+  .badge { font-size:12px; padding:3px 9px; border-radius:20px; border:1px solid var(--line); color:var(--muted); }
+  .badge.on { border-color:var(--teal); color:var(--teal); } .badge.warn { border-color:var(--amber); color:var(--amber); }
+  main { display:grid; grid-template-columns: 1.1fr 1fr; gap:20px; padding:20px 28px; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .card h2 { margin:0 0 10px; font-size:17px; } .card h3 { margin:14px 0 6px; font-size:15px; color:var(--amber); }
+  button { background:var(--amber); color:#0b1d2e; border:0; border-radius:8px; padding:10px 16px; font-weight:700; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:default; }
+  input { background:#0f2238; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px 12px; width:100%; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .verdict { display:inline-block; min-width:78px; text-align:center; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .support { background:#1f5c57; color:#dffaf7; } .reject { background:#5c2a1f; color:#ffe3dc; } .uncertain { background:#4a4a2a; color:#fff3c4; }
+  .sql { font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color:var(--muted); white-space:pre-wrap; background:#0f2238; padding:8px 10px; border-radius:8px; margin-top:6px; display:none; }
+  .claim:hover .sql, .sql.open { display:block; }
+  .action { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .action .st { font-size:12px; color:var(--muted); } .action.approved .st { color:var(--teal); }
+  #map { height:320px; border-radius:10px; background:#0f2238; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } td, th { padding:5px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; } .tabs button { padding:6px 10px; font-size:13px; }
+  .muted { color:var(--muted); } .small { font-size:12px; }
+  .steps { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color:var(--muted); max-height:260px; overflow:auto; }
+  .fail { color:var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">explain-why agent</h1>
+  <span class="q" id="question"></span>
+  <span class="badge" id="b-data">data: …</span>
+  <span class="badge" id="b-model">model: …</span>
+  <span class="badge" id="b-mem">memory: …</span>
+</header>
+<main>
+  <section>
+    <div class="card">
+      <h2>Ask</h2>
+      <div class="row">
+        <input id="ask" placeholder="question">
+        <button id="go">Run agent</button>
+        <button class="ghost" id="reset">Reset memory</button>
+      </div>
+      <p class="muted small" id="desc"></p>
+      <p class="small" id="summary"></p>
+    </div>
+    <div class="card"><h2>Map</h2><div id="map"></div><p class="muted small">Signals with coordinates. No coordinates: the map stays empty.</p></div>
+    <div class="card"><h2>Data</h2><div class="tabs" id="tabs"></div><div id="viewbox" class="muted small">pick a view</div></div>
+    <div class="card"><h2>Sources</h2><div id="sources" class="small"></div></div>
+  </section>
+  <section>
+    <div id="results"><div class="card muted">No run yet. Press <b>Run agent</b>.</div></div>
+    <div class="card"><h2>Run log</h2><div id="steps" class="steps"></div></div>
+  </section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+let META = null, RUN = null, MAP = null, LAYER = null;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function meta() {
+  META = await (await fetch('/meta')).json();
+  document.title = META.title;
+  $('#title').textContent = META.title;
+  $('#question').textContent = META.question;
+  $('#ask').value = META.question;
+  $('#desc').textContent = META.description;
+  $('#b-data').textContent = 'data: ' + META.data_backend; $('#b-data').className = 'badge ' + (META.data_backend === 'zetaris' ? 'on' : 'warn');
+  $('#b-model').textContent = 'model: ' + (META.model.online ? META.model.reason_model : 'offline templater'); $('#b-model').className = 'badge ' + (META.model.online ? 'on' : 'warn');
+  $('#tabs').innerHTML = META.views.map(v => `<button class="ghost" onclick="view('${v}')">${esc(v)}</button>`).join('');
+  $('#sources').innerHTML = '<table><tr><th>source</th><th>access</th><th>status</th></tr>' + META.sources.map(s => `<tr><td>${s.url ? `<a style="color:var(--teal)" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)}</td><td>${esc(s.access)}</td><td>${esc(s.status)}</td></tr>`).join('') + '</table>';
+  const h = await (await fetch('/healthz')).json();
+  $('#b-mem').textContent = `memory: ${h.memory.runs} runs · ${h.memory.remembered_rejections} rejections`;
+  if (!MAP) {
+    MAP = L.map('map', { zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(MAP);
+    const c = (META.extra && META.extra.center) || [52.5, 5.5];
+    MAP.setView(c, (META.extra && META.extra.zoom) || 7);
+  }
+}
+
+async function view(name) {
+  const v = await (await fetch('/view/' + name)).json();
+  const cols = v.columns;
+  $('#viewbox').innerHTML = `<div class="muted small">${esc(v.rows_n)} rows · <code>${esc(v.sql)}</code></div><div style="overflow:auto;max-height:280px"><table><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${v.rows.slice(0, 200).map(r => `<tr>${cols.map(c => `<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')}</table></div>`;
+}
+
+async function run() {
+  $('#go').disabled = true; $('#results').innerHTML = '<div class="card muted">running…</div>';
+  const r = await fetch('/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: $('#ask').value }) });
+  RUN = await r.json(); render(); $('#go').disabled = false; meta();
+}
+
+function render() {
+  const s = RUN.summary;
+  $('#summary').innerHTML = `run <b>${s.run_id}</b> · ${s.signals} signals · ${s.tests_run} tests · ${s.skipped_by_memory} skipped by memory ${s.warm ? '(warm run)' : '(cold run)'} · provenance <b>${s.provenance_pct}%</b> · ${s.elapsed_s}s` + (s.failures.length ? `<br><span class="fail">${s.failures.map(esc).join('<br>')}</span>` : '');
+  $('#results').innerHTML = RUN.results.map(res => {
+    const sg = res.signal;
+    const hv = res.hypotheses.map(h => { const v = res.verdicts.find(x => x.hypothesis_id === h.id) || {}; return `<div class="claim"><span class="verdict ${v.verdict}">${esc(v.verdict)}</span> <b>${esc(h.label)}</b> <span class="muted">— ${esc(v.reason)}</span>${v.sql ? `<div class="sql">${esc(v.sql)}\n-- ${v.rows} rows</div>` : '<div class="sql open">no query behind this verdict → unverified</div>'}</div>`; }).join('');
+    const acts = res.actions.map(a => `<div class="action ${a.status}"><div><b>${a.priority}. ${esc(a.label)}</b><div class="muted small">${esc(a.rationale)}</div></div><div class="row"><span class="st">${esc(a.status)}</span>${a.status === 'draft' ? `<button onclick="approve('${a.id}',true)">Approve</button><button class="ghost" onclick="approve('${a.id}',false)">Reject</button>` : ''}</div></div>`).join('');
+    return `<div class="card"><h2>${esc(sg.label)} <span class="badge">score ${Number(sg.score).toFixed(2)}</span></h2>
+      <div class="claim small muted">${sg.sql ? `found by query (${sg.rows} rows) — hover to see` : 'no query'}<div class="sql">${esc(sg.sql || '')}</div></div>
+      <h3>Competing causes</h3>${hv}
+      <h3>Why (model explanation)</h3><p class="small">${esc(res.explanation)}</p>
+      <h3>Actions · drafts until approved</h3>${acts}</div>`;
+  }).join('');
+  $('#steps').innerHTML = RUN.ledger.steps.map(st => `${st.t.toFixed(2)}s  ${st.agent.padEnd(12)} ${st.what} ${Object.entries(st).filter(([k]) => !['t','agent','what'].includes(k)).map(([k, v]) => `${k}=${v}`).join(' ')}`).map(esc).join('<br>');
+  if (LAYER) LAYER.remove();
+  const pts = RUN.results.map(r => r.signal).filter(s => s.props && s.props.lat != null && s.props.lon != null);
+  if (pts.length) {
+    LAYER = L.layerGroup(pts.map(s => L.circleMarker([s.props.lat, s.props.lon], { radius: 9, color: '#f2a541', fillOpacity: .7 }).bindPopup(`<b>${esc(s.label)}</b><br>score ${Number(s.score).toFixed(2)}`))).addTo(MAP);
+    MAP.fitBounds(L.latLngBounds(pts.map(s => [s.props.lat, s.props.lon])).pad(0.3));
+  }
+}
+
+async function approve(id, ok) {
+  await fetch(`/runs/${RUN.summary.run_id}/approve`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action_id: id, approve: ok }) });
+  RUN = await (await fetch(`/runs/${RUN.summary.run_id}`)).json(); render();
+}
+
+$('#go').onclick = run;
+$('#reset').onclick = async () => { await fetch('/memory', { method: 'DELETE' }); meta(); };
+meta();
+</script>
+</body>
+</html>
