@@ -1,0 +1,5 @@
+event_id,parent_object,date,pieces,altitude_km,cause
+FRAG-2023-A,EXPLORER-DEMO-9 (illustrative),2023-11-14,410,850,battery rupture
+FRAG-2021-C,RB-2009-021D (illustrative),2021-03-02,120,1200,residual propellant
+FRAG-2019-B,TEST-INTERCEPT (illustrative),2019-03-27,270,280,kinetic test
+FRAG-2024-D,RB-2020-068B (illustrative),2024-07-05,90,960,unknown

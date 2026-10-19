@@ -1,0 +1,2 @@
+# core screening is numpy-only; sgp4 is for propagating real TLEs when live elements are used
+sgp4>=2.23
