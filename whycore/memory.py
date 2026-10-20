@@ -1,5 +1,6 @@
 """Run memory. Local JSON files are authoritative; every record is mirrored into Meterless H-MEM (the open engine,
-vendored unmodified in whycore/hmem/engine and served by whycore/hmem/server.ts on HMEM_URL) when that sidecar is up.
+vendored unmodified in whycore/meterless/engines/hmem and served by whycore/meterless/server.ts on
+METERLESS_ENGINES_URL) when that sidecar is up.
 
 What is remembered: per (domain, signal fingerprint) the hypotheses that were REJECTED and why. A warm run skips
 them, which is the 'steps cold vs warm' metric in the evals.
@@ -33,14 +34,14 @@ class HMemMirror:
             return None
 
     def add(self, fp: str, hyp: str, reason: str) -> None:
-        self._call("POST", "/add", json={
+        self._call("POST", "/hmem/add", json={
             "content": f"{settings.meterless_app}: hypothesis {hyp} rejected for {fp}: {reason}",
             "type": "factual", "layer": "long_term", "confidence": 0.9, "source": f"whycore:{settings.meterless_app}",
             "tags": [f"fp:{fp}", f"hyp:{hyp}", f"app:{settings.meterless_app}"],
             "provenance": {"origin": "plan_run", "learnedAt": int(time.time() * 1000), "label": f"Skeptic rejection ({hyp})"}})
 
     def recall(self, fp: str) -> dict:
-        recs = self._call("GET", "/records", params={"tag": f"fp:{fp}"}) or []
+        recs = self._call("GET", "/hmem/records", params={"tag": f"fp:{fp}"}) or []
         out = {}
         for r in recs:
             hyp = next((t[4:] for t in r.get("tags", []) if t.startswith("hyp:")), None)
@@ -49,12 +50,12 @@ class HMemMirror:
         return out
 
     def reset(self) -> None:
-        self._call("POST", "/delete", json={"tag": f"app:{settings.meterless_app}", "reason": "whycore memory reset"})
+        self._call("POST", "/hmem/delete", json={"tag": f"app:{settings.meterless_app}", "reason": "whycore memory reset"})
 
     def stats(self) -> dict:
         if not self.url:
             return {"enabled": False}
-        js = self._call("GET", "/stats")
+        js = self._call("GET", "/hmem/stats")
         return {"enabled": True, "url": self.url, "online": js is not None, "errors": self.errors, **(js or {})}
 
 
@@ -63,7 +64,7 @@ class Memory:
         self.dir = path or settings.memory_dir
         self.runs = os.path.join(self.dir, "runs.jsonl")
         self.rejections = os.path.join(self.dir, "rejections.json")
-        self.hmem = HMemMirror(settings.hmem_url)
+        self.hmem = HMemMirror(settings.meterless_engines_url)
 
     def _ensure(self) -> None:
         os.makedirs(self.dir, exist_ok=True)

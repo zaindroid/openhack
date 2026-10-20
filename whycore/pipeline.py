@@ -92,12 +92,13 @@ class Run:
 
     def _explain(self, prompts: list[tuple[str, str]]) -> None:
         """Explainer: one model call per signal, MODEL_CONCURRENCY at a time (a 50-asset run must finish well inside the
-        edge's 100 s). A failed call is labelled as such in the UI and the ledger, never replaced by invented text."""
+        edge's 100 s). Each explanation records the route, host and model that produced it (or the cache hit). A failed
+        call is labelled as such in the UI and the ledger, never replaced by invented text."""
         def one(p: tuple[str, str]) -> tuple[str, dict]:
             try:
-                return model.chat(p[0], p[1], deep=True), {"model": settings.model_reason if model.configured else "offline templater", "ok": True}
+                return model.answer(p[0], p[1], deep=True)
             except Exception as e:
-                return f"[model error] {str(e)[:200]}", {"model": settings.model_reason, "ok": False}
+                return f"[model error] {str(e)[:200]}", {"model": model.ep["reason"].model, "route": model.ep["reason"].route, "ok": False}
         with ThreadPoolExecutor(max_workers=max(1, settings.model_concurrency)) as ex:
             outs = list(ex.map(one, prompts))
         for r, (text, meta) in zip(self.results, outs):
