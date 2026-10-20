@@ -21,3 +21,22 @@ CREATE DATASOURCE crtsh_pg DESCRIBE BY "crt.sh certwatch, live via dblink gatewa
   fetchsize "1000"
 );
 REGISTER DATASOURCE TABLES ("zaindroid_ct") FROM crtsh_pg;
+-- 3. Scan evidence as Parquet on the shared MinIO, bucket mosca (app/data/scanners/publish_s3.py writes it). Needs the
+--    per-bucket S3A block (app/zetaris/spark-defaults.mosca.conf, ~/zorc/bootstrap/22-zetaris-mosca.sh) and the
+--    lab-mosca-s3-alias forwarder answering as mosca.minio.
+CREATE LIGHTNING DATABASE mosca_s3 DESCRIBE BY "Mosca scan evidence, MinIO bucket mosca, Parquet";
+CREATE LIGHTNING FILESTORE TABLE assets FROM mosca_s3 FORMAT PARQUET OPTIONS (
+  path "s3a://mosca/inventory/current/assets/",
+  awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
+  awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
+);
+CREATE LIGHTNING FILESTORE TABLE probes FROM mosca_s3 FORMAT PARQUET OPTIONS (
+  path "s3a://mosca/inventory/current/probes/",
+  awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
+  awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
+);
+CREATE LIGHTNING FILESTORE TABLE assets_history FROM mosca_s3 FORMAT PARQUET OPTIONS (
+  path "s3a://mosca/inventory/scans/assets/",
+  awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
+  awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
+);
