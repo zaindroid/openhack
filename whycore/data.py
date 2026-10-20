@@ -89,7 +89,9 @@ class DataAccess:
             token = self._ztoken or self._zetaris_login()
             r = httpx.post(url, json=body, timeout=180, headers={"Authorization": f"Bearer {token}", "X-Org-ID": settings.zetaris_org_id,
                                                                   "X-Request-ID": str(uuid.uuid4())})
-            if r.status_code == 401 and attempt == 0:      # token expired: log in once more
+            # An expired or invalid JWT comes back as 401/403, or as a bare 400 {"msg":"Bad Request"} (Lightning 2.4.3.1);
+            # SQL errors are 400 too but carry a HiveSQLException body. Log in once more on the auth cases only.
+            if attempt == 0 and (r.status_code in (401, 403) or (r.status_code == 400 and r.text.strip() == '{"msg":"Bad Request"}')):
                 self._ztoken = None
                 continue
             if not r.is_success:
