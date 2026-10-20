@@ -1,11 +1,61 @@
-"""Run memory. Local JSON files by default; the same records are what get mirrored into Meterless H-MEM when a key
-is present (the pipeline calls remember()/recall(); swapping the store does not change the agents).
+"""Run memory. Local JSON files are authoritative; every record is mirrored into Meterless H-MEM (the open engine,
+vendored unmodified in whycore/hmem/engine and served by whycore/hmem/server.ts on HMEM_URL) when that sidecar is up.
 
 What is remembered: per (domain, signal fingerprint) the hypotheses that were REJECTED and why. A warm run skips
-them, which is the 'steps cold vs warm' metric in the evals."""
+them, which is the 'steps cold vs warm' metric in the evals.
+
+H-MEM mirror: remember() adds one canonical H-MEM record per new rejection (type factual, layer long_term, tags
+fp:<fingerprint> hyp:<id> app:<METERLESS_APP>, provenance plan_run); recall() falls back to H-MEM records by tag when
+the local file has nothing for a fingerprint; reset() deletes this app's records (the engine's append-only ledger keeps
+the history). When the sidecar is unreachable the mirror is off for 60 s and stats() says so; nothing else changes."""
 from __future__ import annotations
 import hashlib, json, os, time
 from whycore.settings import settings
+
+
+class HMemMirror:
+    def __init__(self, url: str | None) -> None:
+        self.url = (url or "").rstrip("/")
+        self.down_until = 0.0
+        self.errors = 0
+
+    def _call(self, method: str, path: str, **kw):
+        if not self.url or time.time() < self.down_until:
+            return None
+        import httpx
+        try:
+            r = httpx.request(method, self.url + path, timeout=2.0, **kw)
+            r.raise_for_status()
+            return r.json()
+        except Exception:
+            self.errors += 1
+            self.down_until = time.time() + 60
+            return None
+
+    def add(self, fp: str, hyp: str, reason: str) -> None:
+        self._call("POST", "/add", json={
+            "content": f"{settings.meterless_app}: hypothesis {hyp} rejected for {fp}: {reason}",
+            "type": "factual", "layer": "long_term", "confidence": 0.9, "source": f"whycore:{settings.meterless_app}",
+            "tags": [f"fp:{fp}", f"hyp:{hyp}", f"app:{settings.meterless_app}"],
+            "provenance": {"origin": "plan_run", "learnedAt": int(time.time() * 1000), "label": f"Skeptic rejection ({hyp})"}})
+
+    def recall(self, fp: str) -> dict:
+        recs = self._call("GET", "/records", params={"tag": f"fp:{fp}"}) or []
+        out = {}
+        for r in recs:
+            hyp = next((t[4:] for t in r.get("tags", []) if t.startswith("hyp:")), None)
+            if hyp:
+                out[hyp] = r["content"].split(": ", 2)[-1]
+        return out
+
+    def reset(self) -> None:
+        self._call("POST", "/delete", json={"tag": f"app:{settings.meterless_app}", "reason": "whycore memory reset"})
+
+    def stats(self) -> dict:
+        if not self.url:
+            return {"enabled": False}
+        js = self._call("GET", "/stats")
+        return {"enabled": True, "url": self.url, "online": js is not None, "errors": self.errors, **(js or {})}
 
 
 class Memory:
@@ -13,6 +63,7 @@ class Memory:
         self.dir = path or settings.memory_dir
         self.runs = os.path.join(self.dir, "runs.jsonl")
         self.rejections = os.path.join(self.dir, "rejections.json")
+        self.hmem = HMemMirror(settings.hmem_url)
 
     def _ensure(self) -> None:
         os.makedirs(self.dir, exist_ok=True)
@@ -25,10 +76,12 @@ class Memory:
         return hashlib.sha1(f"{domain}|{key}".encode()).hexdigest()[:12]
 
     def recall(self, fp: str) -> dict:
-        if not os.path.exists(self.rejections):
-            return {}
-        with open(self.rejections) as f:
-            return json.load(f).get(fp, {})
+        if os.path.exists(self.rejections):
+            with open(self.rejections) as f:
+                local = json.load(f).get(fp, {})
+            if local:
+                return local
+        return self.hmem.recall(fp)
 
     def remember(self, fp: str, rejected: dict[str, str]) -> None:
         self._ensure()
@@ -37,6 +90,9 @@ class Memory:
             with open(self.rejections) as f:
                 store = json.load(f)
         cur = store.get(fp, {})
+        for hyp, reason in rejected.items():
+            if hyp not in cur:
+                self.hmem.add(fp, hyp, reason)
         cur.update(rejected)
         store[fp] = cur
         with open(self.rejections, "w") as f:
@@ -56,12 +112,13 @@ class Memory:
         if os.path.exists(self.rejections):
             with open(self.rejections) as f:
                 rej = sum(len(v) for v in json.load(f).values())
-        return {"runs": n, "remembered_rejections": rej, "dir": self.dir}
+        return {"runs": n, "remembered_rejections": rej, "dir": self.dir, "hmem": self.hmem.stats()}
 
     def reset(self) -> None:
         for p in (self.runs, self.rejections):
             if os.path.exists(p):
                 os.remove(p)
+        self.hmem.reset()
 
 
 memory = Memory()
