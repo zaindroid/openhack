@@ -7,7 +7,8 @@ cases:
     expect_rejected: [gas]                # hypothesis ids that must be rejected
     first_action_contains: "dike"         # the top action's label must contain this (optional)
   - id: warm_run
-    warm: true                            # run twice; second run must skip ≥1 hypothesis via memory
+    warm: true                            # run twice; second run must skip ≥1 hypothesis via memory AND reach the
+                                          # same verdict for every signal (memory may save work, never change answers)
 Scores: pass/fail per case, provenance %, tests cold vs warm.
 """
 from __future__ import annotations
@@ -37,8 +38,13 @@ def main(argv: list[str]) -> int:
         ok, why = True, []
         if c.get("warm"):
             warm = Run(domain).execute()
-            ok = warm.skipped_by_memory >= 1 and warm.tests_run < base.tests_run
+            verdicts = lambda run: {r["signal"]["id"]: {v["hypothesis_id"]: v["verdict"] for v in r["verdicts"]} for r in run.results}
+            cold_v, warm_v = verdicts(base), verdicts(warm)
+            changed = sorted(k for k in cold_v if warm_v.get(k) != cold_v[k])
+            ok = warm.skipped_by_memory >= 1 and warm.tests_run < base.tests_run and not changed
             why.append(f"cold tests={base.tests_run} warm tests={warm.tests_run} skipped={warm.skipped_by_memory}")
+            if changed:
+                why.append(f"memory changed the verdict of {len(changed)} signal(s): {', '.join(changed[:8])}")
         else:
             r = _find(base, c.get("signal_contains", ""))
             if r is None:

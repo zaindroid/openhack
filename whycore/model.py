@@ -152,7 +152,7 @@ class Model:
         delay, last = 1.0, None
         for attempt in range(3):
             try:
-                r = httpx.post(e.base + "/chat/completions", json=body, headers=e.headers(), timeout=180)
+                r = httpx.post(e.base + "/chat/completions", json=body, headers=e.headers(), timeout=settings.model_timeout_s)
                 if r.status_code == 429 or r.status_code >= 500:
                     raise httpx.HTTPStatusError(f"HTTP {r.status_code}", request=r.request, response=r)
                 r.raise_for_status()

@@ -11,7 +11,7 @@ run(question) →
 """
 from __future__ import annotations
 import time, uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import asdict
 from whycore.data import data
 from whycore.domain import Domain, TestResult
@@ -99,8 +99,16 @@ class Run:
                 return model.answer(p[0], p[1], deep=True)
             except Exception as e:
                 return f"[model error] {str(e)[:200]}", {"model": model.ep["reason"].model, "route": model.ep["reason"].route, "ok": False}
-        with ThreadPoolExecutor(max_workers=max(1, settings.model_concurrency)) as ex:
-            outs = list(ex.map(one, prompts))
+        # The whole step gets EXPLAIN_BUDGET_S; calls still running then are labelled pending and left to finish in the
+        # background, where they fill the explanation cache, so the next run on the same evidence shows them.
+        ex = ThreadPoolExecutor(max_workers=max(1, settings.model_concurrency))
+        futs = [ex.submit(one, p) for p in prompts]
+        wait(futs, timeout=settings.explain_budget_s)
+        ex.shutdown(wait=False)
+        pending = {"model": model.ep["reason"].model, "route": model.ep["reason"].route, "ok": False, "pending": True}
+        outs = [f.result() if f.done() else (f"[model pending] not answered within the {settings.explain_budget_s:g} s explanation "
+                                              "budget; it is still being generated and will come from the cache on the next run", pending)
+                for f in futs]
         for r, (text, meta) in zip(self.results, outs):
             r["explanation"] = text
             r["explanation_model"] = meta
