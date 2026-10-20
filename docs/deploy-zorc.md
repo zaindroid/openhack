@@ -16,7 +16,7 @@ One repo, nine deployable branches, one Dockerfile. Each branch becomes its own 
 | main | lab-template | lab.zaindroid.me | 8100 |
 
 ## Coolify (per service)
-1. New resource → Application → Git repository `https://github.com/zaindroid/agent-lab` → branch as above → build pack **Dockerfile** (root `Dockerfile`), port 8080.
+1. New resource → Application → Git repository `https://github.com/zaindroid/openhack` → branch as above → build pack **Dockerfile** (root `Dockerfile`), port 8080.
 2. Environment (minimum): `APP_NAME=<service>`, `METERLESS_APP=<service>`, `DATA_BACKEND=duckdb`, `MEMORY_DIR=/srv/data/memory`.
    Optional: `MODEL_BASE_URL` + `MODEL_API_KEY` (Meterless) for real explanations; `DATA_BACKEND=zetaris`, `ZETARIS_REST=http://zetaris:8888/api/v1.0`, `ZETARIS_USER`, `ZETARIS_PASSWORD`, `ZETARIS_PREFIX=<source>.` once the branch's `app/schema.sql` tables are loaded and registered in the shared Zetaris (see `docs/zetaris.md` on each branch's README).
 3. Persistent volume `/srv/data/memory` (memory survives redeploys; wipe it to demo a cold run).
@@ -29,7 +29,7 @@ Add one public hostname per service in the zorc tunnel config → `http://lab-<n
 
 ## Without Coolify (plain compose)
 ```bash
-git clone https://github.com/zaindroid/agent-lab && cd agent-lab && git checkout idea/kessler
+git clone https://github.com/zaindroid/openhack && cd agent-lab && git checkout idea/kessler
 cp infra/.env.example infra/.env   # set APP_NAME, APP_PORT, keys
 docker compose -f infra/docker-compose.yml up -d --build
 ```
