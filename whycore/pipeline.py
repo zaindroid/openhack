@@ -11,6 +11,7 @@ run(question) →
 """
 from __future__ import annotations
 import time, uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from whycore.data import data
 from whycore.domain import Domain, TestResult
@@ -42,6 +43,7 @@ class Run:
         L.step("scout", "finding signals", backend=data.mode)
         signals = D.scout(data, self.max_signals)
         signals.sort(key=lambda s: -s.score)
+        prompts: list[tuple[str, str]] = []
         for s in signals[: self.max_signals]:
             L.add(Claim(text=s.label, kind="signal", sql=s.sql, source=data.mode, rows=s.rows, data=s.props))
             fp = memory.fingerprint(D.name, s.id, s.props)
@@ -73,22 +75,36 @@ class Run:
             actions.sort(key=lambda a: a.priority)
             for a in actions:
                 L.add(Claim(text=a.label, kind="action", sql=None, status="unverified", data={"priority": a.priority, "rationale": a.rationale}))
-            sys_, user = D.explain_prompt(s, verdicts, actions)
-            explanation = model.chat(sys_, user, deep=True)
-            L.add(Claim(text=explanation, kind="explanation", status="unverified"))
-            L.step("explainer", "done", signal=s.id, model_online=model.online)
+            prompts.append(D.explain_prompt(s, verdicts, actions))
             self.results.append({
                 "signal": asdict(s),
                 "hypotheses": [asdict(h) for h in hyps],
                 "verdicts": [asdict(v) for v in verdicts],
                 "supported": [v.hypothesis_id for v in verdicts if v.verdict == "support"],
                 "actions": [asdict(a) for a in actions],
-                "explanation": explanation,
+                "explanation": "",
             })
+        self._explain(prompts)
         self.status = "done"
         memory.log_run(self.summary())
         self._run_hooks()
         return self
+
+    def _explain(self, prompts: list[tuple[str, str]]) -> None:
+        """Explainer: one model call per signal, MODEL_CONCURRENCY at a time (a 50-asset run must finish well inside the
+        edge's 100 s). A failed call is labelled as such in the UI and the ledger, never replaced by invented text."""
+        def one(p: tuple[str, str]) -> tuple[str, dict]:
+            try:
+                return model.chat(p[0], p[1], deep=True), {"model": settings.model_reason if model.configured else "offline templater", "ok": True}
+            except Exception as e:
+                return f"[model error] {str(e)[:200]}", {"model": settings.model_reason, "ok": False}
+        with ThreadPoolExecutor(max_workers=max(1, settings.model_concurrency)) as ex:
+            outs = list(ex.map(one, prompts))
+        for r, (text, meta) in zip(self.results, outs):
+            r["explanation"] = text
+            r["explanation_model"] = meta
+            self.ledger.add(Claim(text=text, kind="explanation", status="unverified", data=meta))
+            self.ledger.step("explainer", "done" if meta["ok"] else "failed", signal=r["signal"]["id"], model=meta["model"])
 
     def _run_hooks(self) -> None:
         import importlib

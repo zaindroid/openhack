@@ -27,9 +27,12 @@ class Settings:
     model_base_url: str | None = _env("MODEL_BASE_URL")
     model_api_key: str = _env("MODEL_API_KEY", "")
     model_reason: str = _env("MODEL_REASON", "nvidia/nemotron-3.5-super-vl-120b-a12b")
-    model_fast: str = _env("MODEL_FAST", "nvidia/nemotron-3-nano")
+    model_fast: str = _env("MODEL_FAST", "nvidia/nemotron-3.5-lightning-30b-a3b")
+    model_thinking: str = _env("MODEL_THINKING", "off")         # off: chat_template_kwargs.enable_thinking=false (Nemotron)
+    model_concurrency: int = int(_env("MODEL_CONCURRENCY", "8"))
     meterless_app: str = _env("METERLESS_APP", _env("APP_NAME", "whycore-app"))
     memory_dir: str = _env("MEMORY_DIR", "data/memory")
+    hmem_url: str | None = _env("HMEM_URL")                       # Meterless H-MEM sidecar (whycore/hmem/server.ts); unset = mirror off
     max_signals: int = int(_env("MAX_SIGNALS", "5"))
     port: int = int(_env("PORT", "8080"))
     # comma-separated "module:function" called with the finished Run (e.g. app.notary:sign_run)
