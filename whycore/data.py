@@ -2,7 +2,7 @@
 
 Backends
   zetaris  : GET {ZETARIS_REST}/auth/login (Basic) -> JWT, then POST {ZETARIS_REST}/sql-editor/sqls/run (Bearer,
-             X-Org-ID). The hackathon path; bare table names get ZETARIS_PREFIX. Lightning returns every value as a
+             X-Org-ID). The hackathon path; bare table names map through ZETARIS_TABLES, else get ZETARIS_PREFIX. Lightning returns every value as a
              string, so values are typed here (bool, int, float) before any domain code sees them.
   postgres : direct psycopg (dev)
   duckdb   : in-process DuckDB over app/data/seed/*.csv (+ app/schema.sql views). Zero infrastructure: the demo and
@@ -42,6 +42,8 @@ class DataAccess:
                 "elapsed_ms": int((time.time() - t0) * 1000)}
 
     def tables(self) -> list[str]:
+        if self.mode == "zetaris" and self.table_sources():
+            return sorted(self.table_sources())
         if self.mode == "zetaris" and settings.zetaris_prefix:
             res = self.run_sql(f"SHOW DATASOURCE TABLES {settings.zetaris_prefix.rstrip('.')}")
             return sorted(str(next(iter(r.values()))) if "name" not in r else str(r["name"]) for r in res["rows"])
@@ -52,11 +54,18 @@ class DataAccess:
     # ---- backends ---------------------------------------------------------------------------------------------
     _TABLE_REF = re.compile(r"\b(FROM|JOIN)(\s+)(?![(])([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*[.(])", re.IGNORECASE)
 
+    @staticmethod
+    def table_sources() -> dict[str, str]:
+        """ZETARIS_TABLES as {bare name: qualified Zetaris table} (one query can then join S3 and Postgres sources)."""
+        return dict(p.strip().split("=", 1) for p in settings.zetaris_tables.split(",") if "=" in p)
+
     def _prefix(self, sql: str) -> str:
-        """Qualify bare table names after FROM/JOIN with ZETARIS_PREFIX; leave subqueries and dotted names alone."""
-        if not settings.zetaris_prefix:
+        """Qualify bare table names after FROM/JOIN: ZETARIS_TABLES first, else ZETARIS_PREFIX; leave subqueries and dotted
+        names alone."""
+        mapping = self.table_sources()
+        if not settings.zetaris_prefix and not mapping:
             return sql
-        return self._TABLE_REF.sub(lambda m: f"{m.group(1)}{m.group(2)}{settings.zetaris_prefix}{m.group(3)}", sql)
+        return self._TABLE_REF.sub(lambda m: f"{m.group(1)}{m.group(2)}{mapping.get(m.group(3), settings.zetaris_prefix + m.group(3))}", sql)
 
     @staticmethod
     def _typed(v):

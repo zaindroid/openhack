@@ -18,6 +18,8 @@ class Settings:
     zetaris_user: str | None = _env("ZETARIS_USER")
     zetaris_password: str | None = _env("ZETARIS_PASSWORD")
     zetaris_prefix: str = _env("ZETARIS_PREFIX", "")            # e.g. "kessler_pg." so table names resolve in Zetaris
+    # per-table sources, e.g. "assets=mosca_s3.assets,data_classes=mosca_pg.data_classes"; tables not listed get ZETARIS_PREFIX
+    zetaris_tables: str = _env("ZETARIS_TABLES", "")
     zetaris_org_id: str = _env("ZETARIS_ORG_ID", "1")
     zetaris_limit: int = int(_env("ZETARIS_LIMIT", "100000"))   # Lightning caps rows per call at this limit
     database_url: str = _env("DATABASE_URL", "postgresql://app:app@localhost:5432/app")
