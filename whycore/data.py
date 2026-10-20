@@ -1,14 +1,16 @@
 """One door to data. Every call returns {rows, columns, sql, source, rows_n, elapsed_ms} so the ledger can cite it.
 
 Backends
-  zetaris  : POST {ZETARIS_REST}/sql-editor/sqls/run  (the hackathon path; table names get ZETARIS_PREFIX)
+  zetaris  : GET {ZETARIS_REST}/auth/login (Basic) -> JWT, then POST {ZETARIS_REST}/sql-editor/sqls/run (Bearer,
+             X-Org-ID). The hackathon path; bare table names get ZETARIS_PREFIX. Lightning returns every value as a
+             string, so values are typed here (bool, int, float) before any domain code sees them.
   postgres : direct psycopg (dev)
   duckdb   : in-process DuckDB over app/data/seed/*.csv (+ app/schema.sql views). Zero infrastructure: the demo and
              CI path. Table name = CSV file stem.
 Write SQL that is valid in both DuckDB and Postgres: ANSI joins, CAST, no vendor functions.
 """
 from __future__ import annotations
-import glob, logging, os, time
+import glob, logging, os, re, time, uuid
 from typing import Any
 from whycore.settings import settings
 
@@ -19,6 +21,7 @@ class DataAccess:
     def __init__(self) -> None:
         self.mode = settings.data_backend
         self._duck = None
+        self._ztoken: str | None = None
         if self.mode == "zetaris" and not settings.zetaris_rest:
             log.warning("DATA_BACKEND=zetaris but ZETARIS_REST unset: falling back to duckdb")
             self.mode = "duckdb"
@@ -39,24 +42,63 @@ class DataAccess:
                 "elapsed_ms": int((time.time() - t0) * 1000)}
 
     def tables(self) -> list[str]:
+        if self.mode == "zetaris" and settings.zetaris_prefix:
+            res = self.run_sql(f"SHOW DATASOURCE TABLES {settings.zetaris_prefix.rstrip('.')}")
+            return sorted(str(next(iter(r.values()))) if "name" not in r else str(r["name"]) for r in res["rows"])
         if self.mode == "duckdb":
             return [r["name"] for r in self.run_sql("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='main' ORDER BY 1")["rows"]]
         return [r["name"] for r in self.run_sql("SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1")["rows"]]
 
     # ---- backends ---------------------------------------------------------------------------------------------
+    _TABLE_REF = re.compile(r"\b(FROM|JOIN)(\s+)(?![(])([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*[.(])", re.IGNORECASE)
+
     def _prefix(self, sql: str) -> str:
-        return sql if not settings.zetaris_prefix else sql.replace(" FROM ", f" FROM {settings.zetaris_prefix}").replace(" JOIN ", f" JOIN {settings.zetaris_prefix}")
+        """Qualify bare table names after FROM/JOIN with ZETARIS_PREFIX; leave subqueries and dotted names alone."""
+        if not settings.zetaris_prefix:
+            return sql
+        return self._TABLE_REF.sub(lambda m: f"{m.group(1)}{m.group(2)}{settings.zetaris_prefix}{m.group(3)}", sql)
+
+    @staticmethod
+    def _typed(v):
+        if not isinstance(v, str):
+            return v
+        lv = v.lower()
+        if lv in ("true", "false"):
+            return lv == "true"
+        if lv == "null":
+            return None
+        if re.fullmatch(r"-?(0|[1-9][0-9]*)", v):
+            return int(v)
+        if re.fullmatch(r"-?(0|[1-9][0-9]*)\.[0-9]+([eE][-+]?[0-9]+)?", v):
+            return float(v)
+        return v
+
+    def _zetaris_login(self) -> str:
+        import httpx
+        r = httpx.get(settings.zetaris_rest.rstrip("/") + "/auth/login", auth=(settings.zetaris_user or "", settings.zetaris_password or ""),
+                      headers={"X-Org-ID": settings.zetaris_org_id, "X-Request-ID": str(uuid.uuid4())}, timeout=30)
+        r.raise_for_status()
+        self._ztoken = r.json()["idToken"]
+        return self._ztoken
 
     def _zetaris(self, sql: str):
         import httpx
         url = settings.zetaris_rest.rstrip("/") + "/sql-editor/sqls/run"
-        auth = (settings.zetaris_user, settings.zetaris_password) if settings.zetaris_user else None
-        r = httpx.post(url, json={"sql": sql}, auth=auth, timeout=120)
-        r.raise_for_status()
+        body = {"queryId": str(uuid.uuid4()), "sql": sql, "limit": settings.zetaris_limit, "source": "SqlEditor"}
+        for attempt in (0, 1):
+            token = self._ztoken or self._zetaris_login()
+            r = httpx.post(url, json=body, timeout=180, headers={"Authorization": f"Bearer {token}", "X-Org-ID": settings.zetaris_org_id,
+                                                                  "X-Request-ID": str(uuid.uuid4())})
+            if r.status_code == 401 and attempt == 0:      # token expired: log in once more
+                self._ztoken = None
+                continue
+            if not r.is_success:
+                raise RuntimeError(f"Zetaris HTTP {r.status_code}: {r.text[:500]}")
+            break
         js = r.json()
-        if isinstance(js, dict) and "data" in js and "columns" in js:
-            cols = [c["name"] if isinstance(c, dict) else c for c in js["columns"]]
-            return [dict(zip(cols, r)) if isinstance(r, list) else r for r in js["data"]], cols
+        if isinstance(js, dict) and "data" in js and ("headers" in js or "columns" in js):
+            cols = [c["name"] if isinstance(c, dict) else c for c in js.get("headers") or js["columns"]]
+            return [dict(zip(cols, map(self._typed, row))) if isinstance(row, list) else row for row in js["data"]], cols
         if isinstance(js, dict) and "rows" in js:
             rows = js["rows"]; return rows, (list(rows[0].keys()) if rows else [])
         if isinstance(js, list):
