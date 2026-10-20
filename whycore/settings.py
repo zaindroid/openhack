@@ -30,6 +30,8 @@ class Settings:
     memory_dir: str = _env("MEMORY_DIR", "data/memory")
     max_signals: int = int(_env("MAX_SIGNALS", "5"))
     port: int = int(_env("PORT", "8080"))
+    # comma-separated "module:function" called with the finished Run (e.g. app.notary:sign_run)
+    run_hooks: str = _env("RUN_HOOKS", "")
 
 
 settings = Settings()
