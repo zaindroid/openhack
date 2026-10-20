@@ -1,0 +1,16 @@
+# Planted-asset eval, run only by app/data/scanners/planted_test.sh (it sets SEED_DIR to the real inventory plus one
+# planted row and removes everything afterwards).
+env:
+  AS_OF: "2026-10-20"
+  DATA_BACKEND: duckdb
+cases:
+  - id: planted_rsa2048_classical_tls_is_late
+    signal_contains: "planted RSA-2048 test asset"
+    expect_supported: [harvest_now_decrypt_later]
+    expect_rejected: [already_hybrid, forgery_after_qday, dead_asset]
+    first_action_contains: "X25519MLKEM768"
+    arithmetic: >-
+      tls, contracts: x=10, y=1 -> x+y = 11 > 9 years left to 2035 (nist_disallow) -> LATE; start-by year 2035-10-1 = 2024
+      has passed. The handshake (client offering X25519MLKEM768 first) negotiated classical X25519 because the planted
+      server only allows X25519:P-256, so already_hybrid is rejected. Confidentiality-only TLS row -> forgery rejected.
+      Fresh 30-day certificate, in use -> not dead. First draft: move to hybrid TLS 1.3 key exchange X25519MLKEM768.

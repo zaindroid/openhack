@@ -1,6 +1,7 @@
 """TLS inventory of your own endpoints: certificate key algorithm/bits/expiry (Python ssl) and, with `openssl` ≥ 3.5,
 the negotiated TLS 1.3 group and signature type (shows X25519MLKEM768 when hybrid PQ is on). One ordinary handshake
-per target; the client offers X25519MLKEM768:X25519:secp256r1, so the result says what the server picks when hybrid is
+per target (key_bits stays empty: the algorithm column is the key exchange; the certificate's key and size are in
+negotiated_sig); the client offers X25519MLKEM768:X25519:secp256r1, so the result says what the server picks when hybrid is
 on the table.
 
 Target fields: host, port, name, data_class; optional sni (default host), starttls: postgres (send SSLRequest first),
@@ -50,10 +51,14 @@ def openssl_handshake(host: str, port: int, sni: str, starttls: str | None) -> d
         out = subprocess.run(cmd, input=b"", capture_output=True, timeout=20).stderr.decode(errors="ignore")
     except Exception:
         return {"group": "unknown (openssl not available)", "sig": ""}
-    m = re.search(r"Negotiated TLS1.3 group:\s*(\S+)", out)
+    m = re.search(r"Negotiated TLS1.3 group:\s*(\S+)", out)          # openssl 3.5 prints this for hybrid groups
+    t = re.search(r"(?:Peer|Server) Temp Key:\s*([^\n]+)", out)      # ... and this for classical ones
     s = re.search(r"Signature type:\s*(\S+)", out)
     if m:
         grp = m.group(1)
+    elif t:
+        parts = [p.strip() for p in t.group(1).split(",")]
+        grp = parts[1] if parts[0] in ("ECDH", "DH") and len(parts) > 2 else parts[0]   # "X25519, 253 bits" / "ECDH, prime256v1, 256 bits"
     elif re.search(r"OpenSSL 3\.([5-9]|\d\d)", ver):
         p = re.search(r"Protocol version:\s*(\S+)", out)
         grp = f"none reported ({p.group(1) if p else 'handshake failed'})"
@@ -77,7 +82,7 @@ def main() -> None:
         grp = hs["group"]
         kex_alg = "X25519" if "X25519" in grp.upper() else "ECDH"
         rows.append({"name": t.get("name", sni), "host": sni if sni != host else host, "port": port, "kind": "tls", "algorithm": kex_alg,
-                     "key_bits": info["bits"], "purpose": "confidentiality", "negotiated_kex": grp,
+                     "key_bits": "", "purpose": "confidentiality", "negotiated_kex": grp,
                      "negotiated_sig": f"{info['cert_alg']}-{info['bits']} cert" + (f", {hs['sig']}" if hs["sig"] else ""),
                      "expires": info["expires"], "in_use": t.get("in_use", True), "data_class": t.get("data_class", "logs"),
                      "note": "; ".join(x for x in [f"connect {host}:{port}" if sni != host else "", f"{info['proto']} {info['cipher']}",

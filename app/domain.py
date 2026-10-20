@@ -22,7 +22,7 @@ if not os.environ.get("RUN_HOOKS"):      # World Model + Markovian brief, then N
 
 HERE = os.path.dirname(__file__)
 ALG = yaml.safe_load(open(os.path.join(HERE, "algorithms.yaml")))
-AS_OF = date.fromisoformat(os.environ.get("AS_OF", "2026-10-20"))
+AS_OF = date.fromisoformat(os.environ["AS_OF"]) if os.environ.get("AS_OF") else date.today()   # evals pin AS_OF
 YEAR = AS_OF.year
 Z = {s["id"]: s["z_year"] for s in ALG["scenarios"]}
 PRIMARY = ALG["primary_scenario"]

@@ -1,26 +1,73 @@
-# Mosca evals. Verdicts: support = LATE (primary anchor), uncertain = AT RISK (earlier anchor only), reject = SAFE / not applicable.
+# Mosca evals on the REAL inventory of servingz (app/data/inventory, produced by app/data/scanners; gitignored, so this
+# file only runs where the inventory exists). Assets are named by their stable asset_id, never by hostname: this repo is
+# public. The illustrative estate keeps its own evals in app/evals.seed.yaml; the planted-asset test is
+# app/data/scanners/planted_test.sh with app/evals.planted.yaml.
+#
+# Verdicts: support = LATE (primary anchor), uncertain = AT RISK (earlier anchor only), reject = SAFE / not applicable.
+# Mosca's inequality per asset: x (shelf life, data_classes) + y (migration time, migration_paths) > years left to the anchor.
+# AS_OF 2026-10-20: years left to z=2035 (nist_disallow, primary) = 9, to z=2030 (nist_deprecate, earliest) = 4.
+# Tables: credentials x=5 · customer_records x=15 · public_web x=0 · tls y=1 · ssh y=0.5 · cert y=3 · repo_key y=0.25.
+# Category LATE has no member in the real estate on 2026-10-20 (every long-shelf-life TLS hop already negotiates a
+# hybrid group); it is exercised by the planted RSA-2048 asset.
+env:
+  SEED_DIR: app/data/inventory
+  AS_OF: "2026-10-20"
+  DATA_BACKEND: duckdb
 cases:
-  - id: origin_is_late
-    signal_contains: "origin reverse proxy"
-    expect_supported: [harvest_now_decrypt_later]
-    expect_rejected: [already_hybrid, dead_asset, forgery_after_qday]
-    first_action_contains: "X25519MLKEM768"
-  - id: edge_already_hybrid
-    signal_contains: "public edge"
+  - id: ssh_servingz_hybrid_kex_hostkey_at_risk
+    signal_id: SSH-9101807a
     expect_supported: [already_hybrid]
     expect_rejected: [harvest_now_decrypt_later, dead_asset]
-  - id: database_is_late
-    signal_contains: "database TLS"
-    expect_supported: [harvest_now_decrypt_later]
-    expect_rejected: [already_hybrid]
-  - id: firmware_signing_forgery
-    signal_contains: "nRF5340 firmware signing"
-    expect_supported: [forgery_after_qday]
-    expect_rejected: [harvest_now_decrypt_later, already_hybrid, dead_asset]
-    first_action_contains: "ML-DSA-44"
-  - id: contracts_signature_forgery
-    signal_contains: "signed contracts"
-    expect_supported: [forgery_after_qday]
-    expect_rejected: [harvest_now_decrypt_later]
+    expect_uncertain: [forgery_after_qday]
+    first_action_contains: "Re-key signatures"
+    arithmetic: >-
+      ssh, credentials: x=5, y=0.5. Key exchange sntrup761x25519-sha512 is a PQ hybrid (algorithms.yaml pq_kex_markers),
+      so harvest-now-decrypt-later is rejected and already_hybrid supported. The Ed25519 host key signs: x=5 <= 9 years to
+      2035 but 5 > 4 years to 2030 -> forgery AT RISK (uncertain). In use, no expiry -> not dead.
+
+  - id: deploy_key_at_risk_and_in_secrets_dir
+    signal_id: REPO-c2c56386
+    expect_rejected: [already_hybrid, dead_asset]
+    expect_uncertain: [harvest_now_decrypt_later, forgery_after_qday]
+    first_action_contains: "Remove private key"
+    arithmetic: >-
+      repo_key, credentials: x=5, y=0.25, Ed25519, purpose both. Harvest: x+y = 5.25 <= 9 (2035) but > 4 (2030) -> AT RISK.
+      Forgery: x=5 > 4 -> AT RISK. No PQ marker -> already_hybrid rejected. The hygiene action (priority 1: a private key
+      in a repository tree) comes before the two priority-2 re-key drafts.
+
+  - id: edge_customer_records_hybrid_safe
+    signal_id: TLS-999c2c95
+    expect_supported: [already_hybrid]
+    expect_rejected: [harvest_now_decrypt_later, forgery_after_qday, dead_asset]
+    first_action_contains: "post-quantum ready"
+    arithmetic: >-
+      tls edge hop, customer_records: x=15, y=1 -> x+y = 16 > 9, which would be LATE on a classical key exchange; the
+      handshake negotiated X25519MLKEM768, so harvest is rejected (already hybrid). Confidentiality-only asset -> forgery
+      rejected. Certificate valid to 2026-12-19, in use -> not dead. SAFE.
+
+  - id: origin_traefik_hop_hybrid_safe
+    signal_id: TLS-711cd023
+    expect_supported: [already_hybrid]
+    expect_rejected: [harvest_now_decrypt_later, forgery_after_qday, dead_asset]
+    arithmetic: >-
+      tls origin hop (cloudflared -> Traefik 127.0.0.1:443), customer_records: x=15, y=1 -> 16 > 9 if classical; the
+      handshake negotiated X25519MLKEM768 (RSA-2048 self-signed cert, confidentiality-only row) -> SAFE.
+
+  - id: ct_live_certificate_safe
+    signal_id: CT-b6ad3e2b
+    expect_rejected: [harvest_now_decrypt_later, forgery_after_qday, already_hybrid, dead_asset]
+    arithmetic: >-
+      cert, public_web: x=0, y=3, ECDSA P-256, valid to 2026-11-29. Harvest: x+y = 3 <= 4 (2030) -> SAFE under every
+      anchor. Forgery: validity ends 2026 <= 2030 and x=0 <= 4 -> rejected (rotate at renewal). SAFE.
+
+  - id: ct_expired_certificate_dead
+    signal_id: CT-83fe06ec
+    expect_supported: [dead_asset]
+    expect_rejected: [harvest_now_decrypt_later, forgery_after_qday, already_hybrid]
+    first_action_contains: "Retire"
+    arithmetic: >-
+      cert expired 2026-02-23 (in_use false) -> dead_asset supported; harvest and forgery are rejected because retirement
+      covers a dead asset. Retire, do not migrate.
+
   - id: warm_run
     warm: true
