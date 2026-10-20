@@ -56,6 +56,7 @@
       <p class="muted small" id="desc"></p>
       <p class="small" id="summary"></p>
     </div>
+    <div id="extracards"></div>
     <div class="card"><h2>Map</h2><div id="map"></div><p class="muted small">Signals with coordinates. No coordinates: the map stays empty.</p></div>
     <div class="card"><h2>Data</h2><div class="tabs" id="tabs"></div><div id="viewbox" class="muted small">pick a view</div></div>
     <div class="card"><h2>Sources</h2><div id="sources" class="small"></div></div>
@@ -82,6 +83,7 @@ async function meta() {
   $('#b-model').textContent = 'model: ' + (META.model.online ? META.model.reason_model : 'offline templater'); $('#b-model').className = 'badge ' + (META.model.online ? 'on' : 'warn');
   $('#tabs').innerHTML = META.views.map(v => `<button class="ghost" onclick="view('${v}')">${esc(v)}</button>`).join('');
   $('#sources').innerHTML = '<table><tr><th>source</th><th>access</th><th>status</th></tr>' + META.sources.map(s => `<tr><td>${s.url ? `<a style="color:var(--teal)" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>` : esc(s.name)}</td><td>${esc(s.access)}</td><td>${esc(s.status)}</td></tr>`).join('') + '</table>';
+  $('#extracards').innerHTML = ((META.extra && META.extra.cards) || []).map(c => `<div class="card"><h2>${esc(c.title)}</h2>${c.note ? `<p class="muted small">${esc(c.note)}</p>` : ''}<div style="overflow:auto;max-height:300px"><table><tr>${(c.columns||[]).map(x => `<th>${esc(x)}</th>`).join('')}</tr>${(c.rows||[]).map(r => `<tr>${(c.columns||[]).map(x => `<td>${esc(r[x])}</td>`).join('')}</tr>`).join('')}</table></div></div>`).join('');
   const h = await (await fetch('/healthz')).json();
   $('#b-mem').textContent = `memory: ${h.memory.runs} runs · ${h.memory.remembered_rejections} rejections`;
   if (!MAP) {
@@ -107,7 +109,9 @@ async function run() {
 function render() {
   const s = RUN.summary;
   $('#summary').innerHTML = `run <b>${s.run_id}</b> · ${s.signals} signals · ${s.tests_run} tests · ${s.skipped_by_memory} skipped by memory ${s.warm ? '(warm run)' : '(cold run)'} · provenance <b>${s.provenance_pct}%</b> · ${s.elapsed_s}s` + (s.failures.length ? `<br><span class="fail">${s.failures.map(esc).join('<br>')}</span>` : '');
-  $('#results').innerHTML = RUN.results.map(res => {
+  const att = RUN.extras && RUN.extras.attestation;
+  const attHtml = att ? `<div class="card"><h2>Attestation</h2><p class="small">${esc(att.algorithm)} · ${esc(att.claims)} claims signed · chain root <code>${esc(String(att.chain_root).slice(0,16))}…</code> · signer <b>${esc(att.signer)}</b> · <a style="color:var(--teal)" href="/runs/${RUN.summary.run_id}/extras/attestation">download</a> and verify offline</p></div>` : '';
+  $('#results').innerHTML = attHtml + RUN.results.map(res => {
     const sg = res.signal;
     const hv = res.hypotheses.map(h => { const v = res.verdicts.find(x => x.hypothesis_id === h.id) || {}; return `<div class="claim"><span class="verdict ${v.verdict}">${esc(v.verdict)}</span> <b>${esc(h.label)}</b> <span class="muted">— ${esc(v.reason)}</span>${v.sql ? `<div class="sql">${esc(v.sql)}\n-- ${v.rows} rows</div>` : '<div class="sql open">no query behind this verdict → unverified</div>'}</div>`; }).join('');
     const acts = res.actions.map(a => `<div class="action ${a.status}"><div><b>${a.priority}. ${esc(a.label)}</b><div class="muted small">${esc(a.rationale)}</div></div><div class="row"><span class="st">${esc(a.status)}</span>${a.status === 'draft' ? `<button onclick="approve('${a.id}',true)">Approve</button><button class="ghost" onclick="approve('${a.id}',false)">Reject</button>` : ''}</div></div>`).join('');
