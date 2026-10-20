@@ -28,6 +28,7 @@ PRIMARY = ALG["primary_scenario"]
 EARLIEST = min(Z, key=lambda k: Z[k])
 PQ_KEX = [m.lower() for m in ALG["pq_kex_markers"]]
 PQ_SIG = [m.lower() for m in ALG["pq_sig_markers"]]
+NOT_VULNERABLE = {k.lower() for k, v in ALG["classical"].items() if not v.get("quantum_vulnerable", True)}
 
 
 def _is_pq(s: str | None, markers: list[str]) -> bool:
@@ -105,6 +106,9 @@ class MoscaDomain(Domain):
         pq_kex = _is_pq(r["negotiated_kex"], PQ_KEX) or _is_pq(r["algorithm"], PQ_KEX)
         pq_sig = _is_pq(r["negotiated_sig"], PQ_SIG) or _is_pq(r["algorithm"], PQ_SIG)
         dead = (not r["in_use"]) or (bool(r["expires"]) and str(r["expires"]) < AS_OF.isoformat())
+        symmetric = str(r["algorithm"] or "").lower() in NOT_VULNERABLE
+        if symmetric and hyp.id in ("harvest_now_decrypt_later", "forgery_after_qday"):
+            return TestResult(hyp.id, "reject", f"{r['algorithm']} is symmetric (algorithms.yaml: quantum_vulnerable false); Shor does not apply", sql, n)
         if hyp.id == "already_hybrid":
             if pq_kex or pq_sig:
                 return TestResult(hyp.id, "support", f"negotiated {r['negotiated_kex'] or r['negotiated_sig'] or r['algorithm']}: post-quantum mechanism present; no migration needed for this hop", sql, n, {"kex": r["negotiated_kex"]})
@@ -160,7 +164,8 @@ class MoscaDomain(Domain):
             return acts
         if v.get("already_hybrid") == "support":
             acts.append(Action(f"{signal.id}-record", f"Record {p['name']} as post-quantum ready in the CBOM", 3, f"negotiates {p['negotiated_kex'] or p['negotiated_sig']}", {"apply": "cbom: mark pq_ready=true", "blast_radius": "none"}))
-            return acts
+            if v.get("forgery_after_qday") not in ("support", "uncertain"):
+                return acts      # hybrid key exchange and no signature at risk: nothing else to do
         if v.get("harvest_now_decrypt_later") in ("support", "uncertain"):
             pr = 1 if v["harvest_now_decrypt_later"] == "support" else 2
             acts.append(Action(f"{signal.id}-kex", f"Move {p['name']} to {tgt['target']}", pr,

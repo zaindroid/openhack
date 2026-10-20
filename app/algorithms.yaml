@@ -22,6 +22,7 @@ classical:
   DH:       { quantum_vulnerable: true,  purposes: [confidentiality] }
   AES-128:  { quantum_vulnerable: false, note: "symmetric; Grover halves effective strength, 128 still acceptable for most data" }
   AES-256:  { quantum_vulnerable: false }
+  HMAC:     { quantum_vulnerable: false, note: "symmetric MAC (e.g. JWT HS256); Grover only, not broken by Shor" }
 
 # Hybrid / PQ key-exchange identifiers as they appear in TLS and SSH negotiations.
 pq_kex_markers: ["X25519MLKEM768", "MLKEM", "ML-KEM", "mlkem768x25519-sha256", "sntrup761x25519-sha512", "Kyber"]
