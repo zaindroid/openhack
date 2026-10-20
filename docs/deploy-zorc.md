@@ -4,6 +4,7 @@ One repo, nine deployable branches, one Dockerfile. Each branch becomes its own 
 
 | branch | service name | hostname | host port |
 |---|---|---|---|
+| idea/mosca | lab-mosca | mosca.zaindroid.me | 8109 |
 | idea/kessler | lab-kessler | kessler.zaindroid.me | 8101 |
 | idea/lazarus | lab-lazarus | lazarus.zaindroid.me | 8102 |
 | idea/advocate | lab-advocate | advocate.zaindroid.me | 8103 |
@@ -21,6 +22,7 @@ One repo, nine deployable branches, one Dockerfile. Each branch becomes its own 
 3. Persistent volume `/srv/data/memory` (memory survives redeploys; wipe it to demo a cold run).
 4. Network: join `groundswell-net` only if the service must reach the shared Zetaris; container names are `lab-*` so nothing clashes with `postgres`/`zetaris-metastore`.
 5. Health check: `GET /healthz`.
+6. `idea/mosca` only: optional `NOTARY_SERIAL=/dev/ttyACM0` with the nRF5340 passed through (`devices:` in compose or Coolify's device mapping); without it the software signer is used and labelled.
 
 ## Cloudflare Tunnel
 Add one public hostname per service in the zorc tunnel config → `http://lab-<name>:8080`; put all `*.zaindroid.me` lab hosts behind the existing Cloudflare Access policy.
