@@ -5,7 +5,7 @@ env:                                      # optional: applied before whycore rea
   AS_OF: "2026-10-20"
 cases:
   - id: salt_veendam
-    signal_contains: "Veendam"            # a signal whose label contains this must exist
+    signal_contains: "Veendam"            # a signal whose label contains this must exist (or signal_id: exact id)
     expect_supported: [salt]              # hypothesis ids that must be supported for that signal
     expect_rejected: [gas]                # hypothesis ids that must be rejected
     expect_uncertain: []                  # hypothesis ids that must stay uncertain
@@ -57,9 +57,9 @@ def main(argv: list[str]) -> int:
             if changed:
                 why.append(f"memory changed the verdict of {len(changed)} signal(s): {', '.join(changed[:8])}")
         else:
-            r = _find(base, c.get("signal_contains", ""))
+            r = next((x for x in base.results if x["signal"]["id"] == c["signal_id"]), None) if c.get("signal_id") else _find(base, c.get("signal_contains", ""))
             if r is None:
-                ok, why = False, [f"no signal containing '{c.get('signal_contains')}'"]
+                ok, why = False, [f"no signal {c.get('signal_id') or repr(c.get('signal_contains'))}"]
             else:
                 verdict = {v["hypothesis_id"]: v["verdict"] for v in r["verdicts"]}
                 for h in c.get("expect_supported", []):
