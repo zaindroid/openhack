@@ -1,0 +1,10 @@
+data_class,shelf_life_years,examples
+public_web,0,public pages; confidentiality value ~0
+logs,1,operational logs
+telemetry,1,sensor telemetry
+credentials,5,"admin sessions, keys, tokens (rotated, but reused secrets live on)"
+backups,7,encrypted backups kept 7 years
+contracts,10,commercial contracts; legal retention 10 years
+device_lifetime,12,firmware trust must hold for the device's service life
+customer_records,15,personal data with long retention
+health_records,30,medical records

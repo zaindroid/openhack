@@ -1,0 +1,47 @@
+# The ONLY source of cryptographic facts in Mosca. The model never asserts any of this; it only explains verdicts
+# computed from these tables. Edit here, never in prompts.
+#
+# Sources: NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA), all August 2024;
+# NIST IR 8547 (draft, Nov 2024): quantum-vulnerable public-key algorithms deprecated after 2030 (112-bit security),
+# disallowed after 2035; EU Coordinated Implementation Roadmap for PQC (June 2025): high-risk use cases by 2030,
+# as many systems as feasible by 2035. Check these documents before the submission; dates below are what they say today.
+
+standards:
+  - { name: ML-KEM,  fips: "FIPS 203", role: key_encapsulation, status: standardised }
+  - { name: ML-DSA,  fips: "FIPS 204", role: signature,         status: standardised }
+  - { name: SLH-DSA, fips: "FIPS 205", role: signature,         status: standardised }
+  - { name: FN-DSA,  fips: "FIPS 206", role: signature,         status: draft }
+
+# Classical public-key algorithms and what a cryptographically relevant quantum computer (CRQC) breaks.
+classical:
+  RSA:      { quantum_vulnerable: true,  purposes: [confidentiality, signature] }
+  ECDSA:    { quantum_vulnerable: true,  purposes: [signature] }
+  ECDH:     { quantum_vulnerable: true,  purposes: [confidentiality] }
+  X25519:   { quantum_vulnerable: true,  purposes: [confidentiality] }
+  Ed25519:  { quantum_vulnerable: true,  purposes: [signature] }
+  DH:       { quantum_vulnerable: true,  purposes: [confidentiality] }
+  AES-128:  { quantum_vulnerable: false, note: "symmetric; Grover halves effective strength, 128 still acceptable for most data" }
+  AES-256:  { quantum_vulnerable: false }
+
+# Hybrid / PQ key-exchange identifiers as they appear in TLS and SSH negotiations.
+pq_kex_markers: ["X25519MLKEM768", "MLKEM", "ML-KEM", "mlkem768x25519-sha256", "sntrup761x25519-sha512", "Kyber"]
+pq_sig_markers: ["ML-DSA", "MLDSA", "Dilithium", "SLH-DSA", "SPHINCS"]
+
+# Scenarios for z (years until a CRQC exists). Mosca's inequality: shelf_life + migration_time > z  ⇒  already late.
+# These are policy anchors, not forecasts: the two NIST IR 8547 dates and one conservative later date.
+scenarios:
+  - { id: nist_deprecate, z_year: 2030, note: "NIST IR 8547 deprecation of 112-bit RSA/ECC" }
+  - { id: nist_disallow,  z_year: 2035, note: "NIST IR 8547 disallowed; EU roadmap full migration target" }
+  - { id: conservative,   z_year: 2040, note: "later arrival; shows which assets are safe under every anchor" }
+primary_scenario: nist_disallow
+
+# Recommended target per asset kind (what the Planner drafts). Mechanism names are the real ones.
+targets:
+  tls:          { target: "hybrid TLS 1.3 key exchange X25519MLKEM768", how: "enable PQ hybrid groups on the terminating proxy / origin (OpenSSL 3.5+, nginx 1.27+, Cloudflare origin settings)" }
+  ssh_hostkey:  { target: "post-quantum SSH host keys when OpenSSH ships them (ML-DSA)", how: "keep Ed25519 host keys now; rotate when the server and all clients support PQ host-key algorithms; the key exchange is the urgent part" }
+  ssh:          { target: "KexAlgorithms mlkem768x25519-sha256", how: "OpenSSH 9.9+ supports it; default in OpenSSH 10" }
+  vpn:          { target: "hybrid PQ key exchange (WireGuard pre-shared key as interim; vendor PQ KEM when shipped)", how: "interim: add a PSK layer; long term: vendor hybrid KEM" }
+  cert:         { target: "re-issue when CAs ship ML-DSA / hybrid certificates", how: "WebPKI PQ certificates not generally available yet; keep validity short (≤ 90 days) and automate renewal" }
+  firmware_sig: { target: "ML-DSA-44 firmware signing", how: "bootloader verifies ML-DSA (pqm4 on Cortex-M); dual-sign during transition" }
+  repo_key:     { target: "rotate to ML-DSA for signatures; hybrid KEM for encryption", how: "remove long-lived private keys from repos; move to HSM/secrets manager" }
+  doc_sig:      { target: "ML-DSA or SLH-DSA document signatures", how: "timestamp and re-sign long-validity documents" }

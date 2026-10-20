@@ -1,12 +1,26 @@
+# Mosca evals. Verdicts: support = LATE (primary anchor), uncertain = AT RISK (earlier anchor only), reject = SAFE / not applicable.
 cases:
-  - id: riverside_is_wear
-    signal_contains: "Riverside"
-    expect_supported: [wear]
-    expect_rejected: [grid]
-    first_action_contains: "service"
-  - id: harbour_is_grid
-    signal_contains: "Harbour"
-    expect_supported: [grid]
-    expect_rejected: [wear]
+  - id: origin_is_late
+    signal_contains: "origin reverse proxy"
+    expect_supported: [harvest_now_decrypt_later]
+    expect_rejected: [already_hybrid, dead_asset, forgery_after_qday]
+    first_action_contains: "X25519MLKEM768"
+  - id: edge_already_hybrid
+    signal_contains: "public edge"
+    expect_supported: [already_hybrid]
+    expect_rejected: [harvest_now_decrypt_later, dead_asset]
+  - id: database_is_late
+    signal_contains: "database TLS"
+    expect_supported: [harvest_now_decrypt_later]
+    expect_rejected: [already_hybrid]
+  - id: firmware_signing_forgery
+    signal_contains: "nRF5340 firmware signing"
+    expect_supported: [forgery_after_qday]
+    expect_rejected: [harvest_now_decrypt_later, already_hybrid, dead_asset]
+    first_action_contains: "ML-DSA-44"
+  - id: contracts_signature_forgery
+    signal_contains: "signed contracts"
+    expect_supported: [forgery_after_qday]
+    expect_rejected: [harvest_now_decrypt_later]
   - id: warm_run
     warm: true

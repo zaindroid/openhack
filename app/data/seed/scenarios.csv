@@ -1,0 +1,4 @@
+scenario,z_year,note
+nist_deprecate,2030,NIST IR 8547 deprecation of 112-bit RSA/ECC
+nist_disallow,2035,NIST IR 8547 disallowed; EU roadmap full migration target
+conservative,2040,later arrival; shows which assets are safe under every anchor

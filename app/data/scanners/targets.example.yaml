@@ -1,0 +1,12 @@
+# Copy to targets.yaml. Mosca inventories ONLY what is listed here: hosts and files you own or operate.
+# Scanners are read-only (a normal TLS/SSH handshake, a CT-log lookup, reading your own files).
+domains: ["example-estate.net"]                 # for Certificate Transparency lookups (crt.sh)
+tls:                                            # host, port, data_class, name
+  - { host: "www.example-estate.net", port: 443, data_class: public_web, name: "public edge" }
+  - { host: "origin.internal",        port: 443, data_class: contracts,  name: "origin reverse proxy" }
+ssh:
+  - { host: "servingz.internal", port: 22, data_class: credentials, name: "admin SSH" }
+repos:
+  - { path: "/path/to/infra-repo", data_class: credentials }
+firmware:
+  - { path: "/path/to/build/zephyr.bin", name: "nRF5340 app image", data_class: device_lifetime }

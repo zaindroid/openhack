@@ -1,0 +1,16 @@
+asset_id,name,host,port,kind,algorithm,key_bits,purpose,negotiated_kex,negotiated_sig,expires,in_use,data_class,traffic_gb_month,source,found_at,note
+A01,public edge (CDN),www.example-estate.net,443,tls,X25519,256,confidentiality,X25519MLKEM768,ecdsa_secp256r1_sha256,2027-01-15,True,public_web,900,tls_scan,2026-10-20,edge terminates TLS with hybrid ML-KEM
+A02,origin reverse proxy,origin.internal,443,tls,X25519,256,confidentiality,X25519,rsa_pss_rsae_sha256,2027-03-01,True,contracts,120,tls_scan,2026-10-20,edge→origin hop is classical; RSA-2048 origin cert
+A03,admin SSH (servingz),servingz.internal,22,ssh,Ed25519,256,both,curve25519-sha256,ssh-ed25519,,True,credentials,2,ssh_scan,2026-10-20,"host key Ed25519, classical kex"
+A04,rpi-01 SSH,rpi-01.internal,22,ssh,RSA,2048,both,curve25519-sha256,rsa-sha2-512,,True,telemetry,1,ssh_scan,2026-10-20,RSA host key
+A05,rpi-02 SSH,rpi-02.internal,22,ssh,RSA,2048,both,curve25519-sha256,rsa-sha2-512,,True,telemetry,1,ssh_scan,2026-10-20,
+A06,jetson SSH,jetson.internal,22,ssh,Ed25519,256,both,curve25519-sha256,ssh-ed25519,,True,credentials,3,ssh_scan,2026-10-20,
+A07,ESP32 node firmware signing,esp32-fleet,,firmware_sig,ECDSA,256,signature,,ecdsa_p256_sha256,,True,device_lifetime,0,firmware_scan,2026-10-20,secure-boot key ECDSA P-256; devices in field ≥10 y
+A08,nRF5340 firmware signing,nrf5340-dk,,firmware_sig,ECDSA,256,signature,,ecdsa_p256_sha256,,True,device_lifetime,0,firmware_scan,2026-10-20,bootloader verifies ECDSA; demo target for ML-DSA-44
+A09,deploy key in repo,git/infra-repo,,repo_key,RSA,4096,both,,,,True,credentials,0,repo_scan,2026-10-20,PEM private key in deploy/ (should not be in a repo at all)
+A10,site VPN,vpn.internal,51820,vpn,X25519,256,confidentiality,X25519,,,True,credentials,40,config_scan,2026-10-20,WireGuard; no PSK layer
+A11,signed contracts (PDF),docs/contracts,,doc_sig,RSA,2048,signature,,rsa_pkcs1_sha256,2036-12-31,True,contracts,0,doc_scan,2026-10-20,signatures must verify for 10 y
+A12,legacy host cert,old.example-estate.net,443,cert,RSA,2048,both,,rsa_pkcs1_sha256,2025-06-30,False,public_web,0,ct_log,2026-10-20,expired; host decommissioned
+A13,object store TLS,minio.internal,9000,tls,X25519,256,confidentiality,X25519,rsa_pss_rsae_sha256,2027-05-01,True,backups,300,tls_scan,2026-10-20,
+A14,database TLS,postgres.internal,5432,tls,X25519,256,confidentiality,X25519,ecdsa_secp256r1_sha256,2027-05-01,True,customer_records,60,tls_scan,2026-10-20,
+A15,metrics endpoint TLS,metrics.internal,443,tls,X25519,256,confidentiality,X25519,ecdsa_secp256r1_sha256,2027-02-01,True,logs,15,tls_scan,2026-10-20,

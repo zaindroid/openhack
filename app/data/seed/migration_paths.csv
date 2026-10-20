@@ -1,0 +1,8 @@
+kind,migration_years,vendor_ready,note
+tls,1.0,True,"hybrid groups available in OpenSSL 3.5+, major CDNs, nginx 1.27+"
+ssh,0.5,True,OpenSSH 9.9+ ships mlkem768x25519-sha256
+vpn,2.0,False,interim PSK layer; vendor hybrid KEM pending
+cert,3.0,False,WebPKI PQ certificates not generally issued yet
+firmware_sig,2.0,True,pqm4 ML-DSA on Cortex-M; fleet re-provisioning takes time
+repo_key,0.25,True,rotate and remove from repo
+doc_sig,3.0,False,re-sign/timestamp archives when PQ document signatures are supported
