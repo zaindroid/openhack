@@ -38,6 +38,7 @@ python -m whycore.evals app/evals.yaml                      # 6/6 on the illustr
 uvicorn whycore.app:app --port 8080                          # UI; hooks (Notary + CBOM) are on by default
 python notary/verify.py <downloaded attestation.json>        # VERIFIED / FAIL
 NOTARY_SERIAL=/dev/ttyACM0 uvicorn whycore.app:app           # sign on the nRF5340 instead (notary/nrf5340)
+NOTARY_URL=http://<laptop-tailscale-ip>:8099 NOTARY_TOKEN=… uvicorn whycore.app:app   # board on another machine: notary/serve.py next to it
 ```
 
 ## Scanning your own estate (read-only)

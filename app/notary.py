@@ -1,11 +1,14 @@
 """Notary — ML-DSA-signed attestation of a run (run hook: RUN_HOOKS=app.notary:sign_run).
 
 Chain: h0 = sha256(run_id) ; h_i = sha256(h_{i-1} || canonical(claim_i)) ; root = h_n.
-The signer signs `root || run_id` with ML-DSA (FIPS 204). Two signers share one protocol:
+The signer signs `root || run_id` with ML-DSA (FIPS 204). Three signers share one protocol:
   SoftSigner    — dilithium-py ML-DSA-65 on the host; key generated once under MEMORY_DIR/notary/ (demo + CI)
   SerialSigner  — the nRF5340 holding an ML-DSA-44 key (notary/nrf5340); host sends "SIGN <hex>", board answers "SIG <hex>"
+  HttpSigner    — the same board on another machine: notary/serve.py next to it exposes GET /pub and POST /sign
+                  (bearer NOTARY_TOKEN), reached over Tailscale at NOTARY_URL
 `notary/verify.py` re-computes the chain from the attestation and verifies the signature offline.
-Set NOTARY_SERIAL=/dev/ttyACM0 to use the board; otherwise the software signer is used and the attestation says so."""
+Precedence: NOTARY_URL, then NOTARY_SERIAL, else the software signer. If the hardware signer cannot be reached when a
+run is signed, the software signer signs instead and the attestation's signer field says why."""
 from __future__ import annotations
 import hashlib, json, os, time
 from whycore.settings import settings
@@ -66,22 +69,57 @@ class SerialSigner:
         return bytes.fromhex(line[4:])
 
 
+class HttpSigner:
+    """ML-DSA signer behind notary/serve.py (the board stays on the machine it is plugged into)."""
+
+    def __init__(self, url: str, token: str) -> None:
+        import httpx
+        self.url, self.headers = url.rstrip("/"), {"Authorization": f"Bearer {token}"}
+        r = httpx.get(self.url + "/pub", headers=self.headers, timeout=10)
+        r.raise_for_status()
+        js = r.json()
+        self.pk = bytes.fromhex(js["public_key"])
+        self.level = {v: k for k, v in ALG_NAME.items()}[js["algorithm"]]
+        self.name = f"{js['signer']} via {self.url}"
+
+    def sign(self, msg: bytes) -> bytes:
+        import httpx
+        r = httpx.post(self.url + "/sign", json={"msg": msg.hex()}, headers=self.headers, timeout=60)
+        r.raise_for_status()
+        return bytes.fromhex(r.json()["signature"])
+
+
 _signer = None
+
+
+def _soft() -> SoftSigner:
+    return SoftSigner(os.path.join(settings.memory_dir, "notary"))
 
 
 def get_signer():
     global _signer
     if _signer is None:
-        port = os.environ.get("NOTARY_SERIAL")
-        _signer = SerialSigner(port) if port else SoftSigner(os.path.join(settings.memory_dir, "notary"))
+        if os.environ.get("NOTARY_URL"):
+            _signer = HttpSigner(os.environ["NOTARY_URL"], os.environ.get("NOTARY_TOKEN", ""))
+        elif os.environ.get("NOTARY_SERIAL"):
+            _signer = SerialSigner(os.environ["NOTARY_SERIAL"])
+        else:
+            _signer = _soft()
     return _signer
 
 
 def attest(run_id: str, claims: list[dict]) -> dict:
-    s = get_signer()
+    global _signer
     root, hashes = chain(run_id, claims)
     msg = bytes.fromhex(root) + run_id.encode()
-    sig = s.sign(msg)
+    try:
+        s = get_signer()
+        sig = s.sign(msg)
+    except Exception as e:   # hardware unreachable: sign anyway, in software, and say so in the attestation
+        _signer = None
+        s = _soft()
+        s.name = f"software (host); hardware signer unavailable: {type(e).__name__}: {str(e)[:80]}"
+        sig = s.sign(msg)
     return {"version": 1, "run_id": run_id, "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "algorithm": ALG_NAME[s.level], "signer": s.name, "public_key": s.pk.hex(), "chain_root": root, "claims": len(claims),
             "claim_hashes": hashes, "signature": sig.hex(),
