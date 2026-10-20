@@ -1,0 +1,56 @@
+# Zephyr module wrapper for pqm4 (https://github.com/mupq/pqm4), ML-DSA-44 only.
+
+config PQM4_MLDSA44
+	bool "pqm4 ML-DSA-44 (FIPS 204) signatures"
+	# Armv7E-M / Armv8-M Mainline with the DSP extension and a single-precision FPU
+	# (Cortex-M4F, M7, M33F such as the nRF5340 app core, M55).
+	depends on CPU_CORTEX_M4 || CPU_CORTEX_M7 || ARMV8_M_DSP
+	depends on CPU_HAS_FPU
+	select FPU
+	imply ENTROPY_GENERATOR
+	help
+	  Build pqm4's Cortex-M4F ML-DSA-44 implementation (crypto_sign_keypair,
+	  crypto_sign_signature, crypto_sign_verify) plus the shared FIPS 202 /
+	  Keccak-f[1600] code. The pqm4 checkout is located through the PQM4_DIR
+	  CMake variable or environment variable (default:
+	  <west topdir>/modules/crypto/pqm4, with the mupq submodule initialised).
+	  The assembly keeps temporaries in FPU registers s0-s15, so the FPU is
+	  enabled; randombytes() is backed by sys_csrand_get().
+
+if PQM4_MLDSA44
+
+choice PQM4_MLDSA44_IMPL
+	prompt "ML-DSA-44 implementation"
+	default PQM4_MLDSA44_M4F
+
+config PQM4_MLDSA44_M4F
+	bool "m4f (speed)"
+	help
+	  pqm4 crypto_sign/ml-dsa-44/m4f. Fastest variant (pqm4 benchmark:
+	  keygen 1.43 Mcycles, sign 3.94 Mcycles avg, verify 1.42 Mcycles) but
+	  needs ~38 KB (keygen) / ~45 KB (sign) of stack. Set
+	  CONFIG_MAIN_STACK_SIZE >= 53248.
+
+config PQM4_MLDSA44_M4FSTACK
+	bool "m4fstack (small stack)"
+	help
+	  pqm4 crypto_sign/ml-dsa-44/m4fstack. Stack-optimised variant (~4.4 KB
+	  keygen / ~5.1 KB sign) at ~3x the signing time (12.1 Mcycles avg).
+
+endchoice
+
+config PQM4_OPTIMIZE_SPEED
+	bool "Compile pqm4 sources with -O3"
+	default y
+	help
+	  pqm4 itself builds with -O3; the Zephyr default is -Os.
+
+config PQM4_RANDOMBYTES
+	bool "Provide randombytes() backed by sys_csrand_get()"
+	default y
+	help
+	  Every call goes to the Zephyr CSPRNG. If it fails, the output buffer
+	  is zeroed and pqm4_rng_failures() is incremented, so the caller can
+	  discard the result (the firmware answers "ERR entropy").
+
+endif
