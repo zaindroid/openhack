@@ -33,6 +33,7 @@ class Run:
         self.tests_run = 0
         self.created = time.time()
         self.status = "created"
+        self.extras: dict = {}            # filled by run hooks (e.g. a signed attestation)
 
     # ------------------------------------------------------------------------------------------------------------
     def execute(self) -> "Run":
@@ -86,7 +87,18 @@ class Run:
             })
         self.status = "done"
         memory.log_run(self.summary())
+        self._run_hooks()
         return self
+
+    def _run_hooks(self) -> None:
+        import importlib
+        for spec in [h.strip() for h in settings.run_hooks.split(",") if h.strip()]:
+            mod, _, fn = spec.partition(":")
+            try:
+                getattr(importlib.import_module(mod), fn or "run_hook")(self)
+                self.ledger.step("hook", spec)
+            except Exception as e:  # a hook must never break a run; record and continue
+                self.ledger.step("hook", f"{spec} failed: {str(e)[:160]}")
 
     # ------------------------------------------------------------------------------------------------------------
     def approve(self, action_id: str, approve: bool = True) -> dict | None:
@@ -105,6 +117,6 @@ class Run:
                 "data_backend": data.mode, "elapsed_s": round(time.time() - self.created, 2)}
 
     def to_dict(self) -> dict:
-        return {"summary": self.summary(), "status": self.status, "results": self.results, "ledger": self.ledger.to_dict(),
+        return {"summary": self.summary(), "status": self.status, "results": self.results, "ledger": self.ledger.to_dict(), "extras": self.extras,
                 "domain": {"name": self.domain.name, "title": self.domain.title, "track": self.domain.track,
                            "question": self.domain.question, "description": self.domain.description}}
