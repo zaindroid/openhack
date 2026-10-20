@@ -32,7 +32,7 @@ class Settings:
     model_concurrency: int = int(_env("MODEL_CONCURRENCY", "8"))
     meterless_app: str = _env("METERLESS_APP", _env("APP_NAME", "whycore-app"))
     memory_dir: str = _env("MEMORY_DIR", "data/memory")
-    hmem_url: str | None = _env("HMEM_URL")                       # Meterless H-MEM sidecar (whycore/hmem/server.ts); unset = mirror off
+    meterless_engines_url: str | None = _env("METERLESS_ENGINES_URL")  # whycore/meterless/server.ts (H-MEM, World Model, Markovian)
     max_signals: int = int(_env("MAX_SIGNALS", "5"))
     port: int = int(_env("PORT", "8080"))
     # comma-separated "module:function" called with the finished Run (e.g. app.notary:sign_run)
