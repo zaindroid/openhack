@@ -83,6 +83,14 @@ def approve(run_id: str, body: Approve):
     return a
 
 
+@app.get("/runs/{run_id}/extras/{name}")
+def run_extra(run_id: str, name: str):
+    """A hook's artefact (e.g. the signed attestation) as downloadable JSON."""
+    if run_id not in RUNS or name not in RUNS[run_id].extras:
+        raise HTTPException(404, "no such run or extra")
+    return JSONResponse(RUNS[run_id].extras[name], headers={"Content-Disposition": f'attachment; filename="{run_id}-{name}.json"'})
+
+
 @app.get("/view/{name}")
 def view(name: str):
     if name not in DOMAIN.views:
