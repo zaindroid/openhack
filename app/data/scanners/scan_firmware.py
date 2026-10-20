@@ -21,6 +21,10 @@ def main() -> None:
             log_probe("firmware_scan", t["path"], "file not found"); print(t["path"], "not found"); continue
         blob = open(t["path"], "rb").read()
         found = [name for name, oid in OIDS.items() if oid in blob]
+        if not found:   # no evidence of a public-key use is not an asset: an "unknown" signature row would be rated as
+                        # a classical signer with the device's shelf life (LATE) on no evidence at all
+            log_probe("firmware_scan", t["path"], f"no public-key algorithm identifiers in {len(blob)} bytes (no DER verifier key; raw keys are not detected)")
+            print(t["path"], "no OIDs found; logged to probes.csv"); continue
         alg = "ML-DSA" if any("ML-DSA" in f for f in found) else "RSA" if any(f.startswith("RSA") for f in found) else "ECDSA" if any(f.startswith("ECDSA") for f in found) else "Ed25519" if any(f.startswith("Ed25519") for f in found) else "none found"
         rows.append({"name": t.get("name", t["path"]), "host": t["path"], "port": "", "kind": "firmware_sig", "algorithm": alg,
                      "key_bits": 256 if alg in ("ECDSA", "Ed25519") else "", "purpose": "signature", "negotiated_sig": ";".join(found),
