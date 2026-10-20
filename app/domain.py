@@ -8,16 +8,17 @@ Mosca's inequality: an asset is LATE when   shelf_life (x) + migration_time (y) 
 Verdict vocabulary: support = LATE under the primary anchor · uncertain = AT RISK (late only under the earlier anchor)
 · reject = SAFE under every anchor (or the hypothesis simply does not apply)."""
 from __future__ import annotations
-import os
+import os, threading, time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 import yaml
 from whycore.domain import Action, Domain, Hypothesis, Signal, TestResult
 from whycore.settings import settings
 
-if "MAX_SIGNALS" not in os.environ:      # an inventory wants every asset listed, not the top five
-    settings.max_signals = 50
-if not os.environ.get("RUN_HOOKS"):      # Notary attestation + CBOM export on every run unless told otherwise
-    settings.run_hooks = "app.notary:sign_run,app.cbom:attach"
+if "MAX_SIGNALS" not in os.environ:      # an inventory wants every asset evaluated, not the top five
+    settings.max_signals = 100
+if not os.environ.get("RUN_HOOKS"):      # World Model + Markovian brief, then Notary (signs the brief too) and CBOM
+    settings.run_hooks = "whycore.engines:world_model,whycore.engines:brief,app.notary:sign_run,app.cbom:attach"
 
 HERE = os.path.dirname(__file__)
 ALG = yaml.safe_load(open(os.path.join(HERE, "algorithms.yaml")))
@@ -28,6 +29,25 @@ PRIMARY = ALG["primary_scenario"]
 EARLIEST = min(Z, key=lambda k: Z[k])
 PQ_KEX = [m.lower() for m in ALG["pq_kex_markers"]]
 PQ_SIG = [m.lower() for m in ALG["pq_sig_markers"]]
+PQ_KEX_SQL = " OR ".join(f"LOWER(COALESCE(a.negotiated_kex, '')) LIKE '%{m}%'" for m in PQ_KEX)
+ASSET_SQL = """SELECT a.*, d.shelf_life_years AS x, m.migration_years AS y FROM assets a
+                 JOIN data_classes d ON a.data_class = d.data_class JOIN migration_paths m ON a.kind = m.kind WHERE a.asset_id = '{aid}'"""
+_rows: dict[str, tuple[float, dict]] = {}
+_rows_lock = threading.Lock()
+
+
+def asset_row(data, aid: str) -> dict:
+    """The exact query a test cites, run once per asset per run (cached 120 s): the four hypotheses of one asset read
+    the same row instead of sending four identical queries through Zetaris."""
+    sql = ASSET_SQL.format(aid=aid)
+    with _rows_lock:
+        hit = _rows.get(sql)
+    if hit and time.time() - hit[0] < 120:
+        return hit[1]
+    res = data.run_sql(sql)
+    with _rows_lock:
+        _rows[sql] = (time.time(), res)
+    return res
 NOT_VULNERABLE = {k.lower() for k, v in ALG["classical"].items() if not v.get("quantum_vulnerable", True)}
 
 
@@ -46,7 +66,8 @@ class MoscaDomain(Domain):
         "inventory": "SELECT asset_id, name, kind, algorithm, key_bits, purpose, negotiated_kex, data_class, in_use, source FROM assets ORDER BY asset_id",
         "clock": f"""SELECT a.asset_id, a.name, a.kind, a.algorithm, d.shelf_life_years AS x, m.migration_years AS y,
                     ({Z[PRIMARY]} - d.shelf_life_years - m.migration_years) AS start_by_year,
-                    CASE WHEN ({Z[PRIMARY]} - d.shelf_life_years - m.migration_years) < {YEAR} THEN 'LATE'
+                    CASE WHEN a.purpose = 'confidentiality' AND ({PQ_KEX_SQL}) THEN 'HYBRID KEX'
+                         WHEN ({Z[PRIMARY]} - d.shelf_life_years - m.migration_years) < {YEAR} THEN 'LATE'
                          WHEN ({Z[EARLIEST]} - d.shelf_life_years - m.migration_years) < {YEAR} THEN 'AT RISK' ELSE 'SAFE' END AS status
                     FROM assets a JOIN data_classes d ON a.data_class = d.data_class JOIN migration_paths m ON a.kind = m.kind
                     WHERE a.in_use = true ORDER BY start_by_year""",
@@ -84,9 +105,20 @@ class MoscaDomain(Domain):
                 urgency = max(urgency, 1.0)
             label = f"{r['name']}: {r['algorithm']}" + (f" {r['key_bits']}" if r["key_bits"] else "") + \
                     (f", kex {r['negotiated_kex']}" if r["negotiated_kex"] else "") + f" · protects {r['data_class']} ({r['x']} y)"
-            props = dict(r); props.update({"memory_key": f"{r['kind']}|{r['algorithm']}|{r['data_class']}"})
+            # memory generalises across assets only when every input the tests read is the same: kind, algorithm, data class
+            # (x and y), purpose, PQ markers, dead/alive, and whether the signature expires before the earliest anchor.
+            exp_early = bool(r["expires"]) and int(str(r["expires"])[:4]) <= Z[EARLIEST]
+            pq_s = _is_pq(r["negotiated_sig"], PQ_SIG) or _is_pq(r["algorithm"], PQ_SIG)
+            props = dict(r); props.update({"memory_key": f"{r['kind']}|{r['algorithm']}|{r['data_class']}|{r['purpose']}|kex_pq={pq}|sig_pq={pq_s}|dead={bool(dead)}|exp_early={exp_early}"})
             out.append(Signal(id=r["asset_id"], label=label, score=round(urgency, 3), props=props, sql=sql, rows=res["rows_n"]))
-        return out[:limit]
+        out.sort(key=lambda s: -s.score)
+        out = out[:limit]
+        with _rows_lock:
+            _rows.clear()
+        if data.mode != "duckdb":       # remote backend: fetch every asset row up front, 8 at a time
+            with ThreadPoolExecutor(max_workers=8) as ex:
+                list(ex.map(lambda s: asset_row(data, s.id), out))
+        return out
 
     # ---- hypotheses ----------------------------------------------------------------------------------------------
     def hypotheses(self, signal, data):
@@ -97,10 +129,7 @@ class MoscaDomain(Domain):
 
     # ---- tests ----------------------------------------------------------------------------------------------------
     def test(self, signal, hyp, data):
-        aid = signal.id
-        sql = f"""SELECT a.*, d.shelf_life_years AS x, m.migration_years AS y FROM assets a
-                 JOIN data_classes d ON a.data_class = d.data_class JOIN migration_paths m ON a.kind = m.kind WHERE a.asset_id = '{aid}'"""
-        res = data.run_sql(sql); r = res["rows"][0]; n = res["rows_n"]
+        res = asset_row(data, signal.id); sql = res["sql"]; r = res["rows"][0]; n = res["rows_n"]
         x, y = float(r["x"]), float(r["y"])
         rem_p, rem_e = Z[PRIMARY] - YEAR, Z[EARLIEST] - YEAR
         pq_kex = _is_pq(r["negotiated_kex"], PQ_KEX) or _is_pq(r["algorithm"], PQ_KEX)
@@ -195,11 +224,29 @@ class MoscaDomain(Domain):
             return "# WireGuard interim: PresharedKey = <32-byte PSK> per peer; plan vendor hybrid KEM"
         return "# see Planner rationale"
 
+    @staticmethod
+    def status_of(verdicts) -> str:
+        v = {t.hypothesis_id: t.verdict for t in verdicts}
+        risks = (v.get("harvest_now_decrypt_later"), v.get("forgery_after_qday"))
+        if v.get("dead_asset") == "support":
+            return "DEAD (retire)"
+        if "support" in risks:
+            return "LATE"
+        if "uncertain" in risks:
+            return "AT RISK"
+        return "SAFE"
+
+    brief_goal = ("Which keys in our estate are already too late to migrate, why, and in what order do we fix them? Write a brief "
+                  "for an engineering manager: group the assets by verdict (a risk hypothesis with support = LATE, uncertain = "
+                  "AT RISK, every risk rejected = SAFE, dead_asset support = retire), name the asset ids, and give the order of "
+                  "work. Use only the facts in the attachment; never invent dates, numbers or assets.")
+
     def explain_prompt(self, signal, verdicts, actions):
         sys_ = ("You explain post-quantum migration verdicts to an engineering manager in at most 110 words. Use only the numbers given. "
                 "Mosca's inequality: shelf life + migration time > years until a cryptographically relevant quantum computer ⇒ already late. "
                 "Never state when a quantum computer will exist; the anchors are policy dates.")
-        lines = [f"Asset: {signal.label}"] + [f"- {v.hypothesis_id}: {v.verdict.upper()} — {v.reason}" for v in verdicts] + \
+        lines = [f"Asset: {signal.label}", f"Overall status: {self.status_of(verdicts)} (use exactly this word; say late only if it is LATE)"] + \
+                [f"- {v.hypothesis_id}: {v.verdict.upper()} — {v.reason}" for v in verdicts] + \
                 ["Draft actions: " + "; ".join(f"{a.priority}. {a.label}" for a in actions)]
         return sys_, "\n".join(lines)
 
@@ -207,7 +254,7 @@ class MoscaDomain(Domain):
         rows = data.run_sql(self.views["clock"])["rows"]
         return {"center": [50.73, 7.1], "zoom": 5,
                 "cards": [{"title": f"The clock — start-by year under the {PRIMARY} anchor (z = {Z[PRIMARY]})",
-                           "note": f"start_by = z − shelf life − migration time. Anything before {YEAR} is already late. Anchors: " + ", ".join(f"{k}={v}" for k, v in Z.items()),
+                           "note": f"start_by = z − shelf life − migration time. Anything before {YEAR} is already late. HYBRID KEX = a confidentiality-only asset that already negotiates a post-quantum hybrid, so the inequality no longer applies to it (see its verdict). Anchors: " + ", ".join(f"{k}={v}" for k, v in Z.items()),
                            "columns": ["asset_id", "name", "kind", "algorithm", "x", "y", "start_by_year", "status"], "rows": rows}]}
 
 
