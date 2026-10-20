@@ -9,6 +9,7 @@ demo and CI. Every claim carries its SQL and row count; no query ⇒ "unverified
 | branch | idea | question |
 |---|---|---|
 | `main` | template | pump-station outages (illustrative) — keeps the core testable |
+| `idea/mosca` | **Mosca + Notary** | which keys are already too late to migrate to post-quantum crypto, in what order; ML-DSA-signed attestations, CycloneDX CBOM |
 | `idea/kessler` | Kessler | which satellites are on a collision course, why, who should move |
 | `idea/lazarus` | Lazarus | which solved problems in other fields answer this open problem |
 | `idea/advocate` | Advocate | which decisions threaten a legal-person river, and the objection to file |
