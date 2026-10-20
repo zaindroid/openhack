@@ -1,16 +1,32 @@
-"""TLS inventory of your own endpoints: certificate key algorithm/bits/expiry (Python ssl) and, when `openssl` ≥ 3.5 is
-installed, the negotiated TLS 1.3 group (shows X25519MLKEM768 when hybrid PQ is on). One ordinary handshake per host."""
+"""TLS inventory of your own endpoints: certificate key algorithm/bits/expiry (Python ssl) and, with `openssl` ≥ 3.5,
+the negotiated TLS 1.3 group and signature type (shows X25519MLKEM768 when hybrid PQ is on). One ordinary handshake
+per target; the client offers X25519MLKEM768:X25519:secp256r1, so the result says what the server picks when hybrid is
+on the table.
+
+Target fields: host, port, name, data_class; optional sni (default host), starttls: postgres (send SSLRequest first),
+in_use, note. Endpoints without TLS or not reachable are written to probes.csv, not to the inventory."""
 from __future__ import annotations
 import re, socket, ssl, subprocess
-from datetime import datetime
-from common import append, targets
+from common import append, log_probe, targets
+
+PG_SSLREQUEST = bytes.fromhex("0000000804d2162f")
 
 
-def cert_info(host: str, port: int) -> dict:
+def _connect(host: str, port: int, starttls: str | None) -> socket.socket:
+    s = socket.create_connection((host, port), timeout=8)
+    if starttls == "postgres":
+        s.sendall(PG_SSLREQUEST)
+        if s.recv(1) != b"S":
+            s.close()
+            raise ConnectionError("postgres refused SSLRequest (server has no TLS)")
+    return s
+
+
+def cert_info(host: str, port: int, sni: str, starttls: str | None) -> dict:
     ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
-    with socket.create_connection((host, port), timeout=8) as s, ctx.wrap_socket(s, server_hostname=host) as t:
-        der = t.getpeercert(binary_form=True); cipher = t.cipher()
-    alg, bits, exp = "unknown", "", ""
+    with _connect(host, port, starttls) as s, ctx.wrap_socket(s, server_hostname=sni) as t:
+        der = t.getpeercert(binary_form=True); cipher = t.cipher(); proto = t.version()
+    alg, bits, exp, subj = "unknown", "", "", ""
     try:
         from cryptography import x509
         from cryptography.hazmat.primitives.asymmetric import ec, rsa, ed25519
@@ -19,30 +35,54 @@ def cert_info(host: str, port: int) -> dict:
         elif isinstance(k, ec.EllipticCurvePublicKey): alg, bits = "ECDSA", k.curve.key_size
         elif isinstance(k, ed25519.Ed25519PublicKey): alg, bits = "Ed25519", 256
         exp = c.not_valid_after_utc.date().isoformat() if hasattr(c, "not_valid_after_utc") else c.not_valid_after.date().isoformat()
+        subj = c.subject.rfc4514_string()[:60]
     except Exception as e:  # cryptography missing: keep the handshake facts only
         alg = f"unknown ({str(e)[:30]})"
-    return {"cert_alg": alg, "bits": bits, "expires": exp, "cipher": cipher[0] if cipher else ""}
+    return {"cert_alg": alg, "bits": bits, "expires": exp, "cipher": cipher[0] if cipher else "", "proto": proto or "", "subject": subj}
 
 
-def negotiated_group(host: str, port: int) -> str:
+def openssl_handshake(host: str, port: int, sni: str, starttls: str | None) -> dict:
+    cmd = ["openssl", "s_client", "-connect", f"{host}:{port}", "-servername", sni, "-groups", "X25519MLKEM768:X25519:secp256r1", "-brief"]
+    if starttls:
+        cmd[2:2] = ["-starttls", starttls]
     try:
-        out = subprocess.run(["openssl", "s_client", "-connect", f"{host}:{port}", "-servername", host, "-groups", "X25519MLKEM768:X25519:secp256r1", "-brief"],
-                             input=b"", capture_output=True, timeout=15).stderr.decode(errors="ignore")
-        m = re.search(r"Negotiated TLS1.3 group:\s*(\S+)", out)
-        return m.group(1) if m else ("X25519 (group not reported by this openssl)")
+        ver = subprocess.run(["openssl", "version"], capture_output=True, timeout=5).stdout.decode()
+        out = subprocess.run(cmd, input=b"", capture_output=True, timeout=20).stderr.decode(errors="ignore")
     except Exception:
-        return "unknown (openssl not available)"
+        return {"group": "unknown (openssl not available)", "sig": ""}
+    m = re.search(r"Negotiated TLS1.3 group:\s*(\S+)", out)
+    s = re.search(r"Signature type:\s*(\S+)", out)
+    if m:
+        grp = m.group(1)
+    elif re.search(r"OpenSSL 3\.([5-9]|\d\d)", ver):
+        p = re.search(r"Protocol version:\s*(\S+)", out)
+        grp = f"none reported ({p.group(1) if p else 'handshake failed'})"
+    else:
+        grp = f"unknown (needs openssl ≥ 3.5, have {ver.split()[1] if ver else '?'})"
+    return {"group": grp, "sig": s.group(1) if s else ""}
 
 
 def main() -> None:
     rows = []
     for t in targets().get("tls", []):
-        info = cert_info(t["host"], int(t["port"])); grp = negotiated_group(t["host"], int(t["port"]))
-        kex_alg = "X25519" if "X25519" in grp.upper() or "MLKEM" in grp.upper() else "ECDH"
-        rows.append({"name": t.get("name", t["host"]), "host": t["host"], "port": t["port"], "kind": "tls", "algorithm": kex_alg,
-                     "key_bits": info["bits"], "purpose": "confidentiality", "negotiated_kex": grp, "negotiated_sig": f"{info['cert_alg']}-{info['bits']} cert",
-                     "expires": info["expires"], "data_class": t.get("data_class", "logs"), "note": f"cipher {info['cipher']}"})
-        print(t["host"], grp, info)
+        host, port = t["host"], int(t["port"]); sni = t.get("sni", host); st = t.get("starttls")
+        label = f"{host}:{port}" + (f" sni={sni}" if sni != host else "")
+        try:
+            info = cert_info(host, port, sni, st)
+        except Exception as e:
+            log_probe("tls_scan", label, f"no TLS handshake: {type(e).__name__}: {str(e)[:100]}")
+            print(label, "no TLS:", type(e).__name__, str(e)[:80])
+            continue
+        hs = openssl_handshake(host, port, sni, st)
+        grp = hs["group"]
+        kex_alg = "X25519" if "X25519" in grp.upper() else "ECDH"
+        rows.append({"name": t.get("name", sni), "host": sni if sni != host else host, "port": port, "kind": "tls", "algorithm": kex_alg,
+                     "key_bits": info["bits"], "purpose": "confidentiality", "negotiated_kex": grp,
+                     "negotiated_sig": f"{info['cert_alg']}-{info['bits']} cert" + (f", {hs['sig']}" if hs["sig"] else ""),
+                     "expires": info["expires"], "in_use": t.get("in_use", True), "data_class": t.get("data_class", "logs"),
+                     "note": "; ".join(x for x in [f"connect {host}:{port}" if sni != host else "", f"{info['proto']} {info['cipher']}",
+                                                   f"cert {info['subject']}", t.get("note", "")] if x)})
+        print(label, grp, info["cert_alg"], info["bits"], info["expires"])
     print("written:", append(rows, "tls_scan"))
 
 

@@ -1,7 +1,8 @@
 """Finds public-key algorithm identifiers inside firmware images you build: DER AlgorithmIdentifier OIDs for RSA, EC,
 Ed25519 and the ML-DSA family. Tells you which verifier keys a device trusts — the input for the firmware-signing plan."""
 from __future__ import annotations
-from common import append, targets
+import os
+from common import append, log_probe, targets
 
 OIDS = {
     "RSA (rsaEncryption 1.2.840.113549.1.1.1)": bytes.fromhex("06092a864886f70d010101"),
@@ -15,7 +16,9 @@ OIDS = {
 
 def main() -> None:
     rows = []
-    for t in targets().get("firmware", []):
+    for t in targets().get("firmware", []) or []:
+        if not os.path.exists(t["path"]):
+            log_probe("firmware_scan", t["path"], "file not found"); print(t["path"], "not found"); continue
         blob = open(t["path"], "rb").read()
         found = [name for name, oid in OIDS.items() if oid in blob]
         alg = "ML-DSA" if any("ML-DSA" in f for f in found) else "RSA" if any(f.startswith("RSA") for f in found) else "ECDSA" if any(f.startswith("ECDSA") for f in found) else "Ed25519" if any(f.startswith("Ed25519") for f in found) else "none found"
