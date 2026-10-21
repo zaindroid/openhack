@@ -1,4 +1,6 @@
-"""One door to data. Every call returns {rows, columns, sql, source, rows_n, elapsed_ms} so the ledger can cite it.
+"""One door to data. Every call returns {rows, columns, sql, sql_executed, source, rows_n, elapsed_ms} so the ledger can
+cite it: `sql` is the query as the domain wrote it, `sql_executed` the statement the backend actually ran (on Zetaris with
+every table qualified by its source, e.g. FROM mosca_s3.assets). A claim cites both; the UI shows the executed one.
 
 Backends
   zetaris  : GET {ZETARIS_REST}/auth/login (Basic) -> JWT, then POST {ZETARIS_REST}/sql-editor/sqls/run (Bearer,
@@ -10,7 +12,7 @@ Backends
 Write SQL that is valid in both DuckDB and Postgres: ANSI joins, CAST, no vendor functions.
 """
 from __future__ import annotations
-import glob, logging, os, re, time, uuid
+import glob, logging, os, re, threading, time, uuid
 from typing import Any
 from whycore.settings import settings
 
@@ -22,6 +24,8 @@ class DataAccess:
         self.mode = settings.data_backend
         self._duck = None
         self._ztoken: str | None = None
+        self._duck_lock = threading.Lock()          # one DuckDB connection, shared by concurrently running tests
+        self._executed: dict[str, str] = {}         # sql as written -> statement that ran (see executed())
         if self.mode == "zetaris" and not settings.zetaris_rest:
             log.warning("DATA_BACKEND=zetaris but ZETARIS_REST unset: falling back to duckdb")
             self.mode = "duckdb"
@@ -32,14 +36,24 @@ class DataAccess:
     # ---- public -----------------------------------------------------------------------------------------------
     def run_sql(self, sql: str, params: dict | None = None) -> dict[str, Any]:
         t0 = time.time()
+        ran = self._prefix(sql) if self.mode == "zetaris" else sql
         if self.mode == "zetaris":
-            rows, cols = self._zetaris(self._prefix(sql))
+            rows, cols = self._zetaris(ran)
         elif self.mode == "postgres":
             rows, cols = self._postgres(sql, params)
         else:
             rows, cols = self._duckdb(sql, params)
-        return {"rows": rows, "columns": cols, "sql": sql, "source": self.mode, "rows_n": len(rows),
+        if len(self._executed) > 5000:
+            self._executed.clear()
+        self._executed[sql] = ran
+        return {"rows": rows, "columns": cols, "sql": sql, "sql_executed": ran, "source": self.mode, "rows_n": len(rows),
                 "elapsed_ms": int((time.time() - t0) * 1000)}
+
+    def executed(self, sql: str | None) -> str | None:
+        """The statement that ran for `sql` (recorded by run_sql; a query not run in this process is mapped the same way)."""
+        if not sql:
+            return None
+        return self._executed.get(sql) or (self._prefix(sql) if self.mode == "zetaris" else sql)
 
     def tables(self) -> list[str]:
         if self.mode == "zetaris" and self.table_sources():
@@ -146,9 +160,10 @@ class DataAccess:
         log.info("duckdb: %d seed tables from %s", n, settings.seed_dir)
 
     def _duckdb(self, sql: str, params: dict | None):
-        cur = self._duck.execute(sql, params or {}) if params else self._duck.execute(sql)
-        cols = [d[0] for d in cur.description] if cur.description else []
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()] if cols else []
+        with self._duck_lock:
+            cur = self._duck.execute(sql, params or {}) if params else self._duck.execute(sql)
+            cols = [d[0] for d in cur.description] if cur.description else []
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()] if cols else []
         return rows, cols
 
 

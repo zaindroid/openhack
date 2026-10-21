@@ -11,7 +11,9 @@ Fallback: when the primary fails after retries, MODEL_<ROLE>_FALLBACK (a model i
 route (default nim: NIM_BASE_URL, NIM_API_KEY). Every answer records which route, host and model produced it.
 
 Calls retry 3 times with exponential backoff on timeouts, 429 and 5xx. Explanations are cached by sha256 of
-(model, system, user) under MEMORY_DIR/explain_cache.json, so a re-run with the same evidence costs nothing.
+(model, system, user) under MEMORY_DIR/explain_cache.json. The prompt is built only from the run's claims (signal, verdicts
+with their reasons, draft actions), so the key is a hash of those claims: a re-run on the same evidence costs no model
+call (meta cached=true, latency_ms 0), and changed evidence always gets a fresh explanation.
 Nemotron 3.x/3.5 are reasoning models; MODEL_THINKING=off (default) sends chat_template_kwargs.enable_thinking=false
 (not on the meterless route, whose runtime picks the model). `online` is true only when GET /models answered 200 for
 the reason endpoint or its fallback (re-probed every 5 minutes, and right after a failure)."""

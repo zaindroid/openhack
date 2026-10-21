@@ -10,7 +10,7 @@ fp:<fingerprint> hyp:<id> app:<METERLESS_APP>, provenance plan_run); recall() fa
 the local file has nothing for a fingerprint; reset() deletes this app's records (the engine's append-only ledger keeps
 the history). When the sidecar is unreachable the mirror is off for 60 s and stats() says so; nothing else changes."""
 from __future__ import annotations
-import hashlib, json, os, time
+import hashlib, json, os, threading, time
 from whycore.settings import settings
 
 
@@ -65,6 +65,7 @@ class Memory:
         self.runs = os.path.join(self.dir, "runs.jsonl")
         self.rejections = os.path.join(self.dir, "rejections.json")
         self.hmem = HMemMirror(settings.meterless_engines_url)
+        self.lock = threading.Lock()         # remember() runs from the pipeline's test workers
 
     def _ensure(self) -> None:
         os.makedirs(self.dir, exist_ok=True)
@@ -78,13 +79,17 @@ class Memory:
 
     def recall(self, fp: str) -> dict:
         if os.path.exists(self.rejections):
-            with open(self.rejections) as f:
+            with self.lock, open(self.rejections) as f:
                 local = json.load(f).get(fp, {})
             if local:
                 return local
         return self.hmem.recall(fp)
 
     def remember(self, fp: str, rejected: dict[str, str]) -> None:
+        with self.lock:
+            self._remember(fp, rejected)
+
+    def _remember(self, fp: str, rejected: dict[str, str]) -> None:
         self._ensure()
         store = {}
         if os.path.exists(self.rejections):
@@ -96,8 +101,10 @@ class Memory:
                 self.hmem.add(fp, hyp, reason)
         cur.update(rejected)
         store[fp] = cur
-        with open(self.rejections, "w") as f:
+        tmp = self.rejections + ".tmp"
+        with open(tmp, "w") as f:
             json.dump(store, f, indent=1)
+        os.replace(tmp, self.rejections)
 
     def log_run(self, record: dict) -> None:
         self._ensure()

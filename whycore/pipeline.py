@@ -3,7 +3,8 @@
 run(question) →
   Scout       : domain.scout()                          → signals (each with its SQL)
   Investigator: domain.hypotheses(signal)               → ≥2 competing causes; recalled rejections are skipped (warm run)
-  Skeptic     : domain.test(signal, hypothesis)         → support | reject | uncertain, with SQL + rows
+  Skeptic     : domain.test(signal, hypothesis)         → support | reject | uncertain, with the SQL as written and as
+                                                          executed + rows; signals run TEST_CONCURRENCY at a time
                 'nothing rejected' is logged as a failure state (rule 4), never hidden
   Planner     : domain.plan(signal, verdicts)           → ranked draft actions
   Explainer   : model.chat(domain.explain_prompt(...))  → prose for humans (offline templater without a key)
@@ -43,52 +44,83 @@ class Run:
         L.step("scout", "finding signals", backend=data.mode)
         signals = D.scout(data, self.max_signals)
         signals.sort(key=lambda s: -s.score)
+        signals = signals[: self.max_signals]
+        L.step("scout", f"{len(signals)} signals")
+        # Signals are independent: their hypotheses and tests run TEST_CONCURRENCY at a time. Each worker returns its
+        # claims and steps, which go into the ledger in signal order, so the ledger (and its signature) do not depend
+        # on thread timing.
+        with ThreadPoolExecutor(max_workers=max(1, settings.test_concurrency)) as ex:
+            done = list(ex.map(self._signal, signals))
         prompts: list[tuple[str, str]] = []
-        for s in signals[: self.max_signals]:
-            L.add(Claim(text=s.label, kind="signal", sql=s.sql, source=data.mode, rows=s.rows, data=s.props))
-            fp = memory.fingerprint(D.name, s.id, s.props)
-            known = memory.recall(fp)
-            hyps = D.hypotheses(s, data)
-            if len(hyps) < 2:
-                self.failures.append(f"{s.id}: fewer than 2 competing hypotheses (rule 4)")
-            L.step("investigator", "hypotheses", signal=s.id, n=len(hyps), remembered_rejections=len(known))
-            verdicts: list[TestResult] = []
-            for h in hyps:
-                if h.id in known:
-                    verdicts.append(TestResult(h.id, "reject", f"remembered from an earlier run: {known[h.id]}", sql=None))
-                    self.skipped_by_memory += 1
-                    L.step("memory", "skipped hypothesis", signal=s.id, hypothesis=h.id)
-                    continue
-                try:
-                    v = D.test(s, h, data)
-                except Exception as e:  # a broken test is an uncertain verdict with the error, never a crash
-                    v = TestResult(h.id, "uncertain", f"test failed: {str(e)[:140]}")
-                self.tests_run += 1
-                verdicts.append(v)
-                L.add(Claim(text=f"{h.label}: {v.reason}", kind="test", sql=v.sql, source=data.mode, rows=v.rows,
-                            data=v.data, status={"support": "supported", "reject": "rejected", "uncertain": "uncertain"}[v.verdict]))
-                L.step("skeptic", v.verdict, signal=s.id, hypothesis=h.id)
-            if hyps and not any(v.verdict == "reject" for v in verdicts):
-                self.failures.append(f"{s.id}: Skeptic could not reject any hypothesis (rule 4 failure state)")
-            memory.remember(fp, {v.hypothesis_id: v.reason for v in verdicts if v.verdict == "reject" and v.sql})
-            actions = D.plan(s, verdicts, data)
-            actions.sort(key=lambda a: a.priority)
-            for a in actions:
-                L.add(Claim(text=a.label, kind="action", sql=None, status="unverified", data={"priority": a.priority, "rationale": a.rationale}))
-            prompts.append(D.explain_prompt(s, verdicts, actions))
-            self.results.append({
-                "signal": asdict(s),
-                "hypotheses": [asdict(h) for h in hyps],
-                "verdicts": [asdict(v) for v in verdicts],
-                "supported": [v.hypothesis_id for v in verdicts if v.verdict == "support"],
-                "actions": [asdict(a) for a in actions],
-                "explanation": "",
-            })
+        for out in done:
+            for c in out["claims"]:
+                L.add(c)
+            L.steps.extend(out["steps"])
+            self.failures.extend(out["failures"])
+            self.tests_run += out["tests_run"]
+            self.skipped_by_memory += out["skipped"]
+            prompts.append(out["prompt"])
+            self.results.append(out["result"])
+        # Hooks marked `explanation_free` read verdicts and actions only (the World Model, the run brief), so they run
+        # while the Explainer waits on the model; the others (the Notary signs the explanations) run after it.
+        early, late = self._hooks()
+        bg = ThreadPoolExecutor(max_workers=len(early)) if early else None
+        futs = [bg.submit(self._hook, spec, fn) for spec, fn in early] if bg else []
         self._explain(prompts)
+        for f in futs:
+            f.result()
+        if bg:
+            bg.shutdown()
         self.status = "done"
         memory.log_run(self.summary())
-        self._run_hooks()
+        for spec, fn in late:
+            self._hook(spec, fn)
         return self
+
+    def _signal(self, s) -> dict:
+        """Investigator, Skeptic and Planner for one signal; returns its claims and steps instead of writing them."""
+        D, t0 = self.domain, self.ledger.t0
+        claims, steps, failures = [], [], []
+        step = lambda agent, what, **kw: steps.append({"t": round(time.time() - t0, 3), "agent": agent, "what": what, **kw})
+        s.sql_executed = s.sql_executed or data.executed(s.sql)
+        claims.append(Claim(text=s.label, kind="signal", sql=s.sql, sql_executed=s.sql_executed, source=data.mode, rows=s.rows, data=s.props))
+        fp = memory.fingerprint(D.name, s.id, s.props)
+        known = memory.recall(fp)
+        hyps = D.hypotheses(s, data)
+        if len(hyps) < 2:
+            failures.append(f"{s.id}: fewer than 2 competing hypotheses (rule 4)")
+        step("investigator", "hypotheses", signal=s.id, n=len(hyps), remembered_rejections=len(known))
+        verdicts: list[TestResult] = []
+        tests_run = skipped = 0
+        for h in hyps:
+            if h.id in known:
+                verdicts.append(TestResult(h.id, "reject", f"remembered from an earlier run: {known[h.id]}", sql=None))
+                skipped += 1
+                step("memory", "skipped hypothesis", signal=s.id, hypothesis=h.id)
+                continue
+            try:
+                v = D.test(s, h, data)
+            except Exception as e:  # a broken test is an uncertain verdict with the error, never a crash
+                v = TestResult(h.id, "uncertain", f"test failed: {str(e)[:140]}")
+            v.sql_executed = v.sql_executed or data.executed(v.sql)
+            tests_run += 1
+            verdicts.append(v)
+            claims.append(Claim(text=f"{h.label}: {v.reason}", kind="test", sql=v.sql, sql_executed=v.sql_executed, source=data.mode,
+                                rows=v.rows, data=v.data,
+                                status={"support": "supported", "reject": "rejected", "uncertain": "uncertain"}[v.verdict]))
+            step("skeptic", v.verdict, signal=s.id, hypothesis=h.id)
+        if hyps and not any(v.verdict == "reject" for v in verdicts):
+            failures.append(f"{s.id}: Skeptic could not reject any hypothesis (rule 4 failure state)")
+        memory.remember(fp, {v.hypothesis_id: v.reason for v in verdicts if v.verdict == "reject" and v.sql})
+        actions = D.plan(s, verdicts, data)
+        actions.sort(key=lambda a: a.priority)
+        for a in actions:
+            claims.append(Claim(text=a.label, kind="action", sql=None, status="unverified", data={"priority": a.priority, "rationale": a.rationale}))
+        result = {"signal": asdict(s), "hypotheses": [asdict(h) for h in hyps], "verdicts": [asdict(v) for v in verdicts],
+                  "supported": [v.hypothesis_id for v in verdicts if v.verdict == "support"], "actions": [asdict(a) for a in actions],
+                  "explanation": ""}
+        return {"claims": claims, "steps": steps, "failures": failures, "tests_run": tests_run, "skipped": skipped,
+                "prompt": D.explain_prompt(s, verdicts, actions), "result": result}
 
     def _explain(self, prompts: list[tuple[str, str]]) -> None:
         """Explainer: one model call per signal, MODEL_CONCURRENCY at a time (a 50-asset run must finish well inside the
@@ -101,29 +133,42 @@ class Run:
                 return f"[model error] {str(e)[:200]}", {"model": model.ep["reason"].model, "route": model.ep["reason"].route, "ok": False}
         # The whole step gets EXPLAIN_BUDGET_S; calls still running then are labelled pending and left to finish in the
         # background, where they fill the explanation cache, so the next run on the same evidence shows them.
+        # Identical prompts (same evidence, e.g. two certificates with the same facts) are sent once.
         ex = ThreadPoolExecutor(max_workers=max(1, settings.model_concurrency))
-        futs = [ex.submit(one, p) for p in prompts]
-        wait(futs, timeout=settings.explain_budget_s)
+        uniq = {p: ex.submit(one, p) for p in dict.fromkeys(prompts)}
+        wait(list(uniq.values()), timeout=settings.explain_budget_s)
         ex.shutdown(wait=False)
         pending = {"model": model.ep["reason"].model, "route": model.ep["reason"].route, "ok": False, "pending": True}
-        outs = [f.result() if f.done() else (f"[model pending] not answered within the {settings.explain_budget_s:g} s explanation "
-                                              "budget; it is still being generated and will come from the cache on the next run", pending)
-                for f in futs]
+        outs = [uniq[p].result() if uniq[p].done() else (f"[model pending] not answered within the {settings.explain_budget_s:g} s "
+                                                          "explanation budget; it is still being generated and will come from the cache on the next run", pending)
+                for p in prompts]
         for r, (text, meta) in zip(self.results, outs):
             r["explanation"] = text
             r["explanation_model"] = meta
             self.ledger.add(Claim(text=text, kind="explanation", status="unverified", data=meta))
             self.ledger.step("explainer", "done" if meta["ok"] else "failed", signal=r["signal"]["id"], model=meta["model"])
 
-    def _run_hooks(self) -> None:
+    def _hooks(self) -> tuple[list, list]:
+        """RUN_HOOKS split into (explanation_free, the rest), each as [(spec, callable or its import error)]."""
         import importlib
+        early, late = [], []
         for spec in [h.strip() for h in settings.run_hooks.split(",") if h.strip()]:
             mod, _, fn = spec.partition(":")
             try:
-                getattr(importlib.import_module(mod), fn or "run_hook")(self)
-                self.ledger.step("hook", spec)
-            except Exception as e:  # a hook must never break a run; record and continue
-                self.ledger.step("hook", f"{spec} failed: {str(e)[:160]}")
+                f = getattr(importlib.import_module(mod), fn or "run_hook")
+            except Exception as e:
+                late.append((spec, e)); continue
+            (early if getattr(f, "explanation_free", False) else late).append((spec, f))
+        return early, late
+
+    def _hook(self, spec: str, fn) -> None:
+        try:
+            if isinstance(fn, Exception):
+                raise fn
+            fn(self)
+            self.ledger.step("hook", spec)
+        except Exception as e:  # a hook must never break a run; record and continue
+            self.ledger.step("hook", f"{spec} failed: {str(e)[:160]}")
 
     # ------------------------------------------------------------------------------------------------------------
     def approve(self, action_id: str, approve: bool = True) -> dict | None:
