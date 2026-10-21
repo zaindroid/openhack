@@ -46,11 +46,20 @@ class Run:
         signals.sort(key=lambda s: -s.score)
         signals = signals[: self.max_signals]
         L.step("scout", f"{len(signals)} signals")
-        # Signals are independent: their hypotheses and tests run TEST_CONCURRENCY at a time. Each worker returns its
-        # claims and steps, which go into the ledger in signal order, so the ledger (and its signature) do not depend
-        # on thread timing.
+        # Signals are tested TEST_CONCURRENCY at a time. Signals that share a memory fingerprint (memory_key) stay in one
+        # worker, in score order, so what one remembers the next recalls exactly as in a sequential run. Each worker
+        # returns claims and steps, which go into the ledger in signal order: the ledger (and its signature) do not
+        # depend on thread timing.
+        groups: dict[str, list[int]] = {}
+        for i, s in enumerate(signals):
+            groups.setdefault(memory.fingerprint(D.name, s.id, s.props), []).append(i)
+        done: list = [None] * len(signals)
+
+        def group(idx: list[int]) -> None:
+            for i in idx:
+                done[i] = self._signal(signals[i])
         with ThreadPoolExecutor(max_workers=max(1, settings.test_concurrency)) as ex:
-            done = list(ex.map(self._signal, signals))
+            list(ex.map(group, groups.values()))
         prompts: list[tuple[str, str]] = []
         for out in done:
             for c in out["claims"]:
