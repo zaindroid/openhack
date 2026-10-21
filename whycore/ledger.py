@@ -3,6 +3,7 @@ A claim cites the query as written (`sql`) and the statement that actually ran (
 from __future__ import annotations
 import hashlib, time
 from dataclasses import dataclass, field, asdict
+from whycore import events
 
 
 @dataclass
@@ -24,10 +25,11 @@ class Claim:
 
 
 class Ledger:
-    def __init__(self) -> None:
+    def __init__(self, run_id: str | None = None) -> None:
         self.claims: list[Claim] = []
         self.steps: list[dict] = []
         self.t0 = time.time()
+        self.run_id = run_id
 
     def add(self, claim: Claim) -> Claim:
         self.claims.append(claim)
@@ -35,6 +37,7 @@ class Ledger:
 
     def step(self, agent: str, what: str, **kw) -> None:
         self.steps.append({"t": round(time.time() - self.t0, 3), "agent": agent, "what": what, **kw})
+        events.publish("step", run_id=self.run_id, agent=agent, what=what, **kw)
 
     def provenance_pct(self) -> float:
         n = [c for c in self.claims if c.kind in ("signal", "test")]
