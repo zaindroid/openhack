@@ -97,7 +97,14 @@ async function meta() {
 async function view(name) {
   const v = await (await fetch('/view/' + name)).json();
   const cols = v.columns;
-  $('#viewbox').innerHTML = `<div class="muted small">${esc(v.rows_n)} rows · <code>${esc(v.sql)}</code></div><div style="overflow:auto;max-height:280px"><table><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${v.rows.slice(0, 200).map(r => `<tr>${cols.map(c => `<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')}</table></div>`;
+  $('#viewbox').innerHTML = `<div class="muted small">${esc(v.rows_n)} rows · <code>${esc(v.sql_executed || v.sql)}</code></div><div style="overflow:auto;max-height:280px"><table><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${v.rows.slice(0, 200).map(r => `<tr>${cols.map(c => `<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')}</table></div>`;
+}
+
+// A claim cites the statement that actually ran (on Zetaris: every table qualified by its source); the query as the
+// domain wrote it is shown under it when the two differ.
+function sqlHtml(c) {
+  const ran = c.sql_executed || c.sql;
+  return esc(ran) + (c.sql_executed && c.sql_executed !== c.sql ? `\n-- as written in app/domain.py:\n${esc(c.sql).split('\n').map(l => '-- ' + l).join('\n')}` : '');
 }
 
 async function run() {
@@ -113,10 +120,10 @@ function render() {
   const attHtml = att ? `<div class="card"><h2>Attestation</h2><p class="small">${esc(att.algorithm)} · ${esc(att.claims)} claims signed · chain root <code>${esc(String(att.chain_root).slice(0,16))}…</code> · signer <b>${esc(att.signer)}</b> · <a style="color:var(--teal)" href="/runs/${RUN.summary.run_id}/extras/attestation">download</a> and verify offline</p></div>` : '';
   $('#results').innerHTML = attHtml + RUN.results.map(res => {
     const sg = res.signal;
-    const hv = res.hypotheses.map(h => { const v = res.verdicts.find(x => x.hypothesis_id === h.id) || {}; return `<div class="claim"><span class="verdict ${v.verdict}">${esc(v.verdict)}</span> <b>${esc(h.label)}</b> <span class="muted">— ${esc(v.reason)}</span>${v.sql ? `<div class="sql">${esc(v.sql)}\n-- ${v.rows} rows</div>` : '<div class="sql open">no query behind this verdict → unverified</div>'}</div>`; }).join('');
+    const hv = res.hypotheses.map(h => { const v = res.verdicts.find(x => x.hypothesis_id === h.id) || {}; return `<div class="claim"><span class="verdict ${v.verdict}">${esc(v.verdict)}</span> <b>${esc(h.label)}</b> <span class="muted">— ${esc(v.reason)}</span>${v.sql ? `<div class="sql">${sqlHtml(v)}\n-- ${v.rows} rows</div>` : '<div class="sql open">no query behind this verdict → unverified</div>'}</div>`; }).join('');
     const acts = res.actions.map(a => `<div class="action ${a.status}"><div><b>${a.priority}. ${esc(a.label)}</b><div class="muted small">${esc(a.rationale)}</div></div><div class="row"><span class="st">${esc(a.status)}</span>${a.status === 'draft' ? `<button onclick="approve('${a.id}',true)">Approve</button><button class="ghost" onclick="approve('${a.id}',false)">Reject</button>` : ''}</div></div>`).join('');
     return `<div class="card"><h2>${esc(sg.label)} <span class="badge">score ${Number(sg.score).toFixed(2)}</span></h2>
-      <div class="claim small muted">${sg.sql ? `found by query (${sg.rows} rows) — hover to see` : 'no query'}<div class="sql">${esc(sg.sql || '')}</div></div>
+      <div class="claim small muted">${sg.sql ? `found by query (${sg.rows} rows) — hover to see` : 'no query'}<div class="sql">${sg.sql ? sqlHtml(sg) : ''}</div></div>
       <h3>Competing causes</h3>${hv}
       <h3>Why (model explanation)</h3><p class="small">${esc(res.explanation)}</p>
       <h3>Actions · drafts until approved</h3>${acts}</div>`;

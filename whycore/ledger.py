@@ -1,4 +1,5 @@
-"""Evidence ledger. A claim without a query is 'unverified' by construction; nothing in the UI can hide that."""
+"""Evidence ledger. A claim without a query is 'unverified' by construction; nothing in the UI can hide that.
+A claim cites the query as written (`sql`) and the statement that actually ran (`sql_executed`, see whycore.data)."""
 from __future__ import annotations
 import hashlib, time
 from dataclasses import dataclass, field, asdict
@@ -14,6 +15,7 @@ class Claim:
     data: dict = field(default_factory=dict)
     status: str = "verified"        # verified | unverified | rejected | uncertain | supported
     id: str = ""
+    sql_executed: str | None = None
 
     def __post_init__(self) -> None:
         if not self.sql and self.status == "verified":
