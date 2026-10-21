@@ -18,6 +18,8 @@ ALG_NAME = {44: "ML-DSA-44", 65: "ML-DSA-65"}
 
 def canonical(claim: dict) -> bytes:
     keep = {k: claim.get(k) for k in ("id", "text", "kind", "sql", "source", "rows", "status")}
+    if claim.get("sql_executed") is not None:          # the statement that ran (attestations before it lack the field)
+        keep["sql_executed"] = claim["sql_executed"]
     return json.dumps(keep, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 
@@ -123,7 +125,7 @@ def attest(run_id: str, claims: list[dict]) -> dict:
     return {"version": 1, "run_id": run_id, "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "algorithm": ALG_NAME[s.level], "signer": s.name, "public_key": s.pk.hex(), "chain_root": root, "claims": len(claims),
             "claim_hashes": hashes, "signature": sig.hex(),
-            "claims_data": [{k: c.get(k) for k in ("id", "text", "kind", "sql", "source", "rows", "status")} for c in claims]}
+            "claims_data": [{k: c.get(k) for k in ("id", "text", "kind", "sql", "sql_executed", "source", "rows", "status") if k != "sql_executed" or c.get(k) is not None} for c in claims]}
 
 
 def sign_run(run) -> None:

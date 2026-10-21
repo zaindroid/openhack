@@ -10,6 +10,8 @@ import hashlib, json, sys
 
 def canonical(claim: dict) -> bytes:
     keep = {k: claim.get(k) for k in ("id", "text", "kind", "sql", "source", "rows", "status")}
+    if claim.get("sql_executed") is not None:          # the statement that ran (attestations before it lack the field)
+        keep["sql_executed"] = claim["sql_executed"]
     return json.dumps(keep, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 

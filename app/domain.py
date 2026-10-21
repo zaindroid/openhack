@@ -8,15 +8,14 @@ Mosca's inequality: an asset is LATE when   shelf_life (x) + migration_time (y) 
 Verdict vocabulary: support = LATE under the primary anchor · uncertain = AT RISK (late only under the earlier anchor)
 · reject = SAFE under every anchor (or the hypothesis simply does not apply)."""
 from __future__ import annotations
-import os, threading, time
-from concurrent.futures import ThreadPoolExecutor
+import os
 from datetime import date
 import yaml
 from whycore.domain import Action, Domain, Hypothesis, Signal, TestResult
 from whycore.settings import settings
 
 if "MAX_SIGNALS" not in os.environ:      # an inventory wants every asset evaluated, not the top five
-    settings.max_signals = 100
+    settings.max_signals = 1000
 if not os.environ.get("RUN_HOOKS"):      # World Model + Markovian brief, then Notary (signs the brief too) and CBOM
     settings.run_hooks = "whycore.engines:world_model,whycore.engines:brief,app.notary:sign_run,app.cbom:attach"
 
@@ -30,24 +29,6 @@ EARLIEST = min(Z, key=lambda k: Z[k])
 PQ_KEX = [m.lower() for m in ALG["pq_kex_markers"]]
 PQ_SIG = [m.lower() for m in ALG["pq_sig_markers"]]
 PQ_KEX_SQL = " OR ".join(f"LOWER(COALESCE(a.negotiated_kex, '')) LIKE '%{m}%'" for m in PQ_KEX)
-ASSET_SQL = """SELECT a.*, d.shelf_life_years AS x, m.migration_years AS y FROM assets a
-                 JOIN data_classes d ON a.data_class = d.data_class JOIN migration_paths m ON a.kind = m.kind WHERE a.asset_id = '{aid}'"""
-_rows: dict[str, tuple[float, dict]] = {}
-_rows_lock = threading.Lock()
-
-
-def asset_row(data, aid: str) -> dict:
-    """The exact query a test cites, run once per asset per run (cached 120 s): the four hypotheses of one asset read
-    the same row instead of sending four identical queries through Zetaris."""
-    sql = ASSET_SQL.format(aid=aid)
-    with _rows_lock:
-        hit = _rows.get(sql)
-    if hit and time.time() - hit[0] < 120:
-        return hit[1]
-    res = data.run_sql(sql)
-    with _rows_lock:
-        _rows[sql] = (time.time(), res)
-    return res
 NOT_VULNERABLE = {k.lower() for k, v in ALG["classical"].items() if not v.get("quantum_vulnerable", True)}
 
 
@@ -112,13 +93,7 @@ class MoscaDomain(Domain):
             props = dict(r); props.update({"memory_key": f"{r['kind']}|{r['algorithm']}|{r['data_class']}|{r['purpose']}|kex_pq={pq}|sig_pq={pq_s}|dead={bool(dead)}|exp_early={exp_early}"})
             out.append(Signal(id=r["asset_id"], label=label, score=round(urgency, 3), props=props, sql=sql, rows=res["rows_n"]))
         out.sort(key=lambda s: -s.score)
-        out = out[:limit]
-        with _rows_lock:
-            _rows.clear()
-        if data.mode != "duckdb":       # remote backend: fetch every asset row up front, 8 at a time
-            with ThreadPoolExecutor(max_workers=8) as ex:
-                list(ex.map(lambda s: asset_row(data, s.id), out))
-        return out
+        return out[:limit]
 
     # ---- hypotheses ----------------------------------------------------------------------------------------------
     def hypotheses(self, signal, data):
@@ -129,7 +104,15 @@ class MoscaDomain(Domain):
 
     # ---- tests ----------------------------------------------------------------------------------------------------
     def test(self, signal, hyp, data):
-        res = asset_row(data, signal.id); sql = res["sql"]; r = res["rows"][0]; n = res["rows_n"]
+        # One Zetaris statement per run: every test reads its asset's row from the scout query (assets × data_classes ×
+        # migration_paths, x and y included) and cites that statement; data.asset_id names the row.
+        r, sql, n = signal.props, signal.sql, signal.rows
+        res = self._test(r, hyp, sql, n)
+        res.sql_executed = signal.sql_executed
+        res.data = {"asset_id": r["asset_id"], **(res.data or {})}
+        return res
+
+    def _test(self, r, hyp, sql, n):
         x, y = float(r["x"]), float(r["y"])
         rem_p, rem_e = Z[PRIMARY] - YEAR, Z[EARLIEST] - YEAR
         pq_kex = _is_pq(r["negotiated_kex"], PQ_KEX) or _is_pq(r["algorithm"], PQ_KEX)
