@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>live · agents at work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root { --bg:#070b14; --bg2:#0b1324; --glass:rgba(16,26,48,.72); --line:rgba(120,160,255,.16); --text:#e6ecff; --muted:#7e8cad;
+          --cyan:#22d3ee; --mag:#e879f9; --amber:#fbbf24; --lime:#a3e635; --red:#fb7185; --blue:#60a5fa; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:radial-gradient(1200px 700px at 70% -10%, #15224a 0%, var(--bg) 55%), var(--bg); color:var(--text);
+         font:14px/1.45 "Space Grotesk", system-ui, sans-serif; overflow-x:hidden; }
+  body::before { content:""; position:fixed; inset:0; background-image:linear-gradient(rgba(120,160,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(120,160,255,.06) 1px, transparent 1px);
+                 background-size:48px 48px; mask-image:radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%); pointer-events:none; }
+  header { display:flex; align-items:center; gap:18px; padding:16px 24px; border-bottom:1px solid var(--line); backdrop-filter:blur(8px); position:sticky; top:0; z-index:5; background:rgba(7,11,20,.7); }
+  header h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:.3px; }
+  header h1 span { color:var(--cyan); }
+  .q { color:var(--muted); font-size:13px; flex:1; min-width:200px; }
+  .pill { font:12px "JetBrains Mono", monospace; padding:4px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted); white-space:nowrap; }
+  .pill.on { border-color:var(--lime); color:var(--lime); box-shadow:0 0 12px rgba(163,230,53,.25); }
+  .pill.warn { border-color:var(--amber); color:var(--amber); }
+  .btn { background:linear-gradient(135deg, var(--cyan), var(--mag)); color:#07101c; border:0; border-radius:12px; padding:12px 22px; font:700 14px "Space Grotesk"; cursor:pointer; box-shadow:0 0 24px rgba(34,211,238,.35); }
+  .btn:disabled { opacity:.5; cursor:default; box-shadow:none; }
+  .ghost { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:10px 14px; cursor:pointer; font:500 13px "Space Grotesk"; }
+  main { display:grid; grid-template-columns: 1fr 380px; grid-template-rows:auto auto; gap:16px; padding:16px 24px 32px; max-width:1680px; margin:0 auto; }
+  @media (max-width: 1100px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--glass); border:1px solid var(--line); border-radius:18px; backdrop-filter:blur(10px); box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .graph { position:relative; padding:8px; min-height:520px; }
+  .graph svg { width:100%; height:auto; display:block; }
+  .counters { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:14px; }
+  .c { border:1px solid var(--line); border-radius:14px; padding:10px 12px; background:rgba(7,11,20,.5); }
+  .c b { display:block; font:700 26px/1 "Space Grotesk"; color:var(--cyan); }
+  .c span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+  .c.mag b { color:var(--mag); } .c.amber b { color:var(--amber); } .c.lime b { color:var(--lime); }
+  .feed { padding:14px; height:440px; overflow:auto; font:12px/1.5 "JetBrains Mono", monospace; }
+  .feed div { padding:3px 0; border-bottom:1px dashed rgba(120,160,255,.08); white-space:pre-wrap; animation:in .3s ease-out; }
+  @keyframes in { from { opacity:0; transform:translateX(8px);} to { opacity:1; transform:none;} }
+  .k { color:var(--muted); } .q1 { color:var(--blue);} .sc { color:var(--cyan);} .iv { color:var(--amber);} .sk { color:var(--mag);} .pl { color:var(--lime);} .md { color:#c4b5fd;} .nt { color:#f0abfc;} .hu { color:#fde68a;}
+  .sup { color:var(--lime);} .rej { color:var(--red);} .unc { color:var(--amber);}
+  .why { grid-column:1 / -1; padding:16px 20px; display:grid; grid-template-columns:1.2fr 1fr; gap:16px; }
+  @media (max-width: 1100px) { .why { grid-template-columns:1fr; } }
+  .why h3 { margin:0 0 6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+  .why p { margin:0; color:var(--text); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+  .card { border:1px solid var(--line); border-radius:14px; padding:12px; background:rgba(7,11,20,.5); animation:in .4s ease-out; }
+  .card b { display:block; font-size:13px; margin-bottom:6px; }
+  .chip { display:inline-block; font:11px "JetBrains Mono"; padding:2px 8px; border-radius:999px; margin:2px 4px 2px 0; border:1px solid var(--line); }
+  .chip.support { color:var(--lime); border-color:var(--lime);} .chip.reject { color:var(--red); border-color:var(--red);} .chip.uncertain { color:var(--amber); border-color:var(--amber);}
+  .tip { position:absolute; pointer-events:none; background:#0b1324; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:12px; max-width:280px; color:var(--text); box-shadow:0 10px 30px rgba(0,0,0,.5); display:none; z-index:9; }
+  .tip b { color:var(--cyan); }
+  .node { cursor:help; }
+  .node .ring { transform-origin:center; transform-box:fill-box; }
+  .node.active .ring { animation:pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:.25; transform:scale(1);} 50% { opacity:.9; transform:scale(1.18);} }
+  .node.flash .box { animation:flash .5s ease-out; }
+  @keyframes flash { 0% { filter:brightness(2.2);} 100% { filter:brightness(1);} }
+  .lbl { font:600 12px "Space Grotesk"; fill:var(--text); }
+  .sub { font:10px "JetBrains Mono"; fill:var(--muted); }
+  .edge { fill:none; stroke:rgba(120,160,255,.22); stroke-width:2; stroke-dasharray:6 8; animation:flow 2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset:-28; } }
+  .badge { font:700 11px "JetBrains Mono"; fill:#07101c; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:0 0 20px; }
+  a { color:var(--cyan); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>●</span> <span id="title">agents at work</span></h1>
+  <div class="q" id="question"></div>
+  <span class="pill" id="p-data">data</span>
+  <span class="pill" id="p-model">model</span>
+  <span class="pill" id="p-run">idle</span>
+  <button class="ghost" id="explain">what am I looking at?</button>
+  <button class="btn" id="go">▶ run the agents</button>
+</header>
+<main>
+  <section class="panel graph" id="graph">
+    <svg viewBox="0 0 1200 560" id="svg" aria-label="agent pipeline"></svg>
+    <div class="tip" id="tip"></div>
+  </section>
+  <aside>
+    <div class="panel counters">
+      <div class="c"><b id="n-q">0</b><span>queries</span></div>
+      <div class="c"><b id="n-rows">0</b><span>rows read</span></div>
+      <div class="c amber"><b id="n-sig">0</b><span>signals</span></div>
+      <div class="c mag"><b id="n-tests">0</b><span>tests</span></div>
+      <div class="c lime"><b id="n-sup">0</b><span>supported</span></div>
+      <div class="c"><b id="n-rej" style="color:var(--red)">0</b><span>rejected</span></div>
+      <div class="c"><b id="n-model">0</b><span>model calls</span></div>
+      <div class="c mag"><b id="n-sign">0</b><span>signed / hooks</span></div>
+    </div>
+    <div class="panel feed" id="feed" style="margin-top:16px"><div class="k">waiting for events… press ▶ run the agents</div></div>
+  </aside>
+  <section class="panel why">
+    <div>
+      <h3>why this matters</h3>
+      <p id="desc"></p>
+      <p class="k" style="margin-top:8px;font-size:12px">Numbers decide (every verdict carries the SQL that ran). The model only explains. A human approves every action. The notary signs the whole run so it can be verified later.</p>
+      <div id="summary" style="margin-top:10px;font:12px 'JetBrains Mono';color:var(--muted)"></div>
+    </div>
+    <div>
+      <h3>what the agents found</h3>
+      <div class="cards" id="cards"><div class="k">nothing yet</div></div>
+      <p style="margin-top:10px"><a href="/">open the full report ↗</a></p>
+    </div>
+  </section>
+</main>
+<footer>live view · events stream over SSE · nothing here is scripted: every dot is a real query, test, model call or signature</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const C = { cyan:'#22d3ee', mag:'#e879f9', amber:'#fbbf24', lime:'#a3e635', red:'#fb7185', blue:'#60a5fa', violet:'#c4b5fd', pink:'#f0abfc' };
+let META = null, RUN_ID = null, counters = {q:0, rows:0, sig:0, tests:0, sup:0, rej:0, model:0, sign:0}, lastAgent = 'scout';
+
+// ---------- icons (tiny, hand-drawn) ----------
+const ICON = {
+  source: '<path d="M-10,-6 h20 v12 h-20z M-10,-2 h20 M-10,2 h20" fill="none" stroke="currentColor" stroke-width="2"/>',
+  zetaris: '<path d="M-9,10 V-4 a9,9 0 0 1 18,0 V10 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="3" cy="3" r="1.6" fill="currentColor"/>',
+  scout: '<circle r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M0,0 L7,-5" stroke="currentColor" stroke-width="2"/><circle r="2" fill="currentColor"/>',
+  investigator: '<path d="M-5,6 a7,7 0 1 1 10,0 v3 h-10z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-3,12 h6" stroke="currentColor" stroke-width="2"/>',
+  skeptic: '<path d="M0,-10 L9,-6 V2 C9,7 4,10 0,11 C-4,10 -9,7 -9,2 V-6 Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-4,1 L-1,4 L5,-3" fill="none" stroke="currentColor" stroke-width="2.4"/>',
+  planner: '<rect x="-8" y="-9" width="16" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-4,-3 h8 M-4,1 h8 M-4,5 h5" stroke="currentColor" stroke-width="2"/>',
+  human: '<circle cy="-4" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-9,11 a9,8 0 0 1 18,0" fill="none" stroke="currentColor" stroke-width="2"/>',
+  model: '<rect x="-9" y="-9" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="-4" y="-4" width="8" height="8" fill="currentColor"/><path d="M-9,-3 h-3 M-9,3 h-3 M9,-3 h3 M9,3 h3 M-3,-9 v-3 M3,-9 v-3 M-3,9 v3 M3,9 v3" stroke="currentColor" stroke-width="2"/>',
+  memory: '<rect x="-9" y="-7" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-5,-7 v-3 M0,-7 v-3 M5,-7 v-3 M-5,-2 h10 M-5,2 h6" stroke="currentColor" stroke-width="2"/>',
+  notary: '<rect x="-7" y="-2" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M-4,-2 v-4 a4,4 0 0 1 8,0 v4" fill="none" stroke="currentColor" stroke-width="2"/><circle cy="4" r="1.6" fill="currentColor"/>',
+};
+const EXPLAIN = {
+  zetaris: ['Zetaris — the one data door', 'Every table, file and live API is reachable as SQL through one endpoint. The agents never touch a database directly, so every number can be re-run.'],
+  scout: ['Scout — finds the signals', 'Runs the first query: what looks unusual, risky or urgent? Each signal carries the SQL that found it.'],
+  investigator: ['Investigator — competing causes', 'Proposes at least two rival explanations for each signal. Memory tells it which ones were already ruled out last time.'],
+  skeptic: ['Skeptic — numbers decide', 'Tests every hypothesis against data: support / reject / uncertain, with the query and row count attached. Nothing is "plausible by default".'],
+  planner: ['Planner — ranked drafts', 'Turns supported causes into actions with priority, rationale, rollback and blast radius. Drafts only.'],
+  human: ['Human — approves', 'Nothing changes until a person clicks Approve. Approvals are recorded and signed.'],
+  model: ['Nemotron via Meterless — explains', 'The language model writes the plain-language explanation of verdicts it did not make. Answers are cached by evidence hash.'],
+  memory: ['Memory (H-MEM) — compounding', 'Rejected hypotheses are remembered per signal fingerprint; the next run skips them. Cold vs warm is a measured number.'],
+  notary: ['Notary — signs the run', 'A SHA-256 chain over every claim, signed with ML-DSA (post-quantum). Anyone can verify the attestation offline.'],
+  source: ['Data source', 'A real table, file or live API registered in Zetaris.'],
+};
+
+// ---------- graph ----------
+const svg = $('#svg');
+const NODES = {};
+const EDGES = {};
+function addNode(id, x, y, label, sub, icon, color, w = 150, h = 54) {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'node'); g.setAttribute('transform', `translate(${x - w / 2},${y - h / 2})`); g.dataset.id = id; g.dataset.kind = icon;
+  g.innerHTML = `<rect class="ring" x="-6" y="-6" width="${w + 12}" height="${h + 12}" rx="18" fill="none" stroke="${color}" stroke-width="2" opacity=".25"/>
+    <rect class="box" width="${w}" height="${h}" rx="14" fill="rgba(10,18,36,.92)" stroke="${color}" stroke-width="1.5"/>
+    <g transform="translate(26,${h / 2})" style="color:${color}">${ICON[icon]}</g>
+    <text class="lbl" x="48" y="${h / 2 - 3}">${esc(label)}</text><text class="sub" x="48" y="${h / 2 + 13}">${esc(sub)}</text>
+    <g class="badgeg" transform="translate(${w - 10},-2)" style="display:none"><circle r="11" fill="${color}"/><text class="badge" text-anchor="middle" y="4">0</text></g>`;
+  svg.appendChild(g);
+  NODES[id] = { g, x, y, w, h, color, icon };
+  g.addEventListener('mousemove', e => { const [t, d] = EXPLAIN[icon] || EXPLAIN.source; const tip = $('#tip'); tip.style.display = 'block'; tip.innerHTML = `<b>${esc(t)}</b><br>${esc(d)}`; const r = $('#graph').getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px'; });
+  g.addEventListener('mouseleave', () => $('#tip').style.display = 'none');
+}
+function addEdge(a, b, bend = 0) {
+  const A = NODES[a], B = NODES[b];
+  const ax = A.x + A.w / 2, ay = A.y, bx = B.x - B.w / 2, by = B.y;
+  const mx = (ax + bx) / 2;
+  const d = (Math.abs(ay - by) < 2 && !bend) ? `M${ax},${ay} L${bx},${by}` : `M${ax},${ay} C${mx + bend},${ay} ${mx - bend},${by} ${bx},${by}`;
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', d); p.setAttribute('class', 'edge'); svg.insertBefore(p, svg.firstChild);
+  EDGES[a + '>' + b] = p;
+  // reverse direction path for return trips
+  const r = document.createElementNS('http://www.w3.org/2000/svg', 'path'); r.setAttribute('d', d); r.setAttribute('fill', 'none'); r.setAttribute('stroke', 'none'); svg.insertBefore(r, svg.firstChild);
+  EDGES[b + '>' + a] = r; EDGES[b + '>' + a].reverse = true;
+}
+function build(meta) {
+  svg.innerHTML = '';
+  const srcs = (meta.sources || []).filter(s => (s.status || '').toLowerCase() !== 'reference').slice(0, 5);
+  const n = Math.max(srcs.length, 1), top = 280 - (n - 1) * 46;
+  srcs.forEach((s, i) => addNode('src' + i, 110, top + i * 92, (s.name || 'source').slice(0, 20), (s.access || '').slice(0, 22), 'source', C.blue, 190, 48));
+  if (!srcs.length) addNode('src0', 110, 280, 'seed data', 'csv → duckdb', 'source', C.blue, 190, 48);
+  addNode('zetaris', 340, 280, 'Zetaris', meta.data_backend === 'zetaris' ? 'federated SQL' : meta.data_backend + ' (dev)', 'zetaris', C.cyan, 150, 54);
+  addNode('scout', 520, 280, 'Scout', 'find signals', 'scout', C.cyan);
+  addNode('investigator', 700, 280, 'Investigator', '≥2 rival causes', 'investigator', C.amber);
+  addNode('skeptic', 880, 280, 'Skeptic', 'numbers decide', 'skeptic', C.mag);
+  addNode('planner', 1060, 280, 'Planner', 'ranked drafts', 'planner', C.lime);
+  addNode('memory', 610, 110, 'Memory · H-MEM', 'skips what was rejected', 'memory', C.amber, 190, 50);
+  addNode('model', 880, 110, 'Nemotron · Meterless', (meta.model && meta.model.reason_model || '').split('/').pop().slice(0, 26), 'model', C.violet, 210, 50);
+  addNode('notary', 880, 460, 'Notary · ML-DSA', 'signs every claim', 'notary', C.pink, 190, 50);
+  addNode('human', 1060, 460, 'Human', 'approves actions', 'human', C.amber);
+  Object.keys(NODES).filter(k => k.startsWith('src')).forEach(k => addEdge(k, 'zetaris', 40));
+  addEdge('zetaris', 'scout'); addEdge('scout', 'investigator'); addEdge('investigator', 'skeptic'); addEdge('skeptic', 'planner');
+  addEdge('memory', 'investigator', 30); addEdge('skeptic', 'model', 30); addEdge('model', 'planner', 30);
+  addEdge('planner', 'human', 30); addEdge('planner', 'notary', 30); addEdge('human', 'notary', 10);
+  addEdge('zetaris', 'skeptic', -120);
+  // raise nodes above edges
+  Object.values(NODES).forEach(nd => svg.appendChild(nd.g));
+}
+
+// ---------- particles ----------
+const particles = [];
+function shoot(a, b, color, size = 5, dur = 900) {
+  const e = EDGES[a + '>' + b]; if (!e) return;
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('r', size); c.setAttribute('fill', color); c.style.filter = `drop-shadow(0 0 6px ${color})`;
+  svg.appendChild(c);
+  particles.push({ el: c, path: e, rev: !!e.reverse, t0: performance.now(), dur, len: e.getTotalLength() });
+}
+function tick(now) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; let u = (now - p.t0) / p.dur;
+    if (u >= 1) { p.el.remove(); particles.splice(i, 1); continue; }
+    u = u < .5 ? 2 * u * u : -1 + (4 - 2 * u) * u;             // ease in-out
+    const pt = p.path.getPointAtLength((p.rev ? 1 - u : u) * p.len);
+    p.el.setAttribute('cx', pt.x); p.el.setAttribute('cy', pt.y);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+function activate(id, on = true) { const n = NODES[id]; if (!n) return; n.g.classList.toggle('active', on); }
+function flash(id, color) { const n = NODES[id]; if (!n) return; n.g.classList.remove('flash'); void n.g.offsetWidth; n.g.classList.add('flash'); if (color) { n.g.querySelector('.box').setAttribute('stroke', color); setTimeout(() => n.g.querySelector('.box').setAttribute('stroke', n.color), 600); } }
+function badge(id, v) { const n = NODES[id]; if (!n) return; const b = n.g.querySelector('.badgeg'); b.style.display = ''; b.querySelector('text').textContent = v; }
+function randomSrc() { const ks = Object.keys(NODES).filter(k => k.startsWith('src')); return ks[Math.floor(Math.random() * ks.length)]; }
+
+// ---------- feed & counters ----------
+function feed(cls, text) {
+  const f = $('#feed'); if (f.firstChild && f.firstChild.classList.contains('k') && f.children.length === 1) f.innerHTML = '';
+  const d = document.createElement('div'); d.className = cls; d.textContent = text; f.appendChild(d);
+  while (f.children.length > 400) f.removeChild(f.firstChild);
+  f.scrollTop = f.scrollHeight;
+}
+function paint() { for (const [k, id] of Object.entries({ q:'#n-q', rows:'#n-rows', sig:'#n-sig', tests:'#n-tests', sup:'#n-sup', rej:'#n-rej', model:'#n-model', sign:'#n-sign' })) $(id).textContent = counters[k].toLocaleString(); }
+
+// ---------- event handling ----------
+function onEvent(ev) {
+  if (ev.run_id && RUN_ID && ev.run_id !== RUN_ID && ev.type !== 'query' && ev.type !== 'model') return;   // another run's events
+  switch (ev.type) {
+    case 'query': {
+      counters.q++; counters.rows += ev.rows_n || 0; paint();
+      const s = randomSrc(); shoot(s, 'zetaris', C.blue, 4, 600); flash('zetaris');
+      const tgt = ['scout', 'skeptic', 'investigator', 'planner'].includes(lastAgent) ? lastAgent : 'scout';
+      setTimeout(() => shoot('zetaris', tgt === 'scout' ? 'scout' : 'skeptic', C.cyan, 4, 700), 500);
+      feed('q1', `⟶ ${ev.backend}  ${ev.rows_n} rows  ${ev.elapsed_ms} ms   ${(ev.sql || '').replace(/\s+/g, ' ').slice(0, 90)}`);
+      break; }
+    case 'run': {
+      if (ev.status === 'running') { $('#p-run').textContent = 'running ' + ev.run_id; $('#p-run').className = 'pill warn'; feed('k', `▶ run ${ev.run_id}: ${ev.question}`); }
+      if (ev.status === 'done') { $('#p-run').textContent = 'done · provenance ' + ev.summary.provenance_pct + '%'; $('#p-run').className = 'pill on'; Object.keys(NODES).forEach(k => activate(k, false)); $('#go').disabled = false;
+        $('#summary').textContent = `${ev.summary.signals} signals · ${ev.summary.tests_run} tests · ${ev.summary.skipped_by_memory} skipped by memory (${ev.summary.warm ? 'warm' : 'cold'} run) · ${ev.summary.elapsed_s}s`;
+        feed('k', `■ done in ${ev.summary.elapsed_s}s — provenance ${ev.summary.provenance_pct}%`); burst(); setTimeout(() => showCards(ev.run_id), 300); }
+      if (ev.status === 'failed') { $('#p-run').textContent = 'failed'; $('#p-run').className = 'pill warn'; feed('rej', '✖ ' + ev.error); $('#go').disabled = false; }
+      break; }
+    case 'signal': { counters.sig++; paint(); badge('scout', counters.sig); shoot('scout', 'investigator', C.cyan, 5, 800); feed('sc', `◎ signal ${ev.signal}: ${ev.label}`); break; }
+    case 'model': { counters.model++; paint(); activate('model', true); shoot('skeptic', 'model', C.violet, 5, 700); setTimeout(() => shoot('model', 'planner', C.violet, 5, 700), 700); flash('model');
+      feed('md', `✦ ${ev.cached ? 'cache hit' : ev.ok ? 'model answered' : 'model failed'}  ${ev.model || ''}  ${ev.latency_ms != null ? ev.latency_ms + ' ms' : ''} ${ev.error || ''}`); break; }
+    case 'step': {
+      const a = ev.agent;
+      if (a === 'scout') { lastAgent = 'scout'; activate('scout', /finding/.test(ev.what)); feed('sc', `scout: ${ev.what}`); }
+      if (a === 'investigator') { lastAgent = 'investigator'; activate('scout', false); activate('investigator', true); if (ev.remembered_rejections) { shoot('memory', 'investigator', C.amber, 5, 700); } feed('iv', `investigator ${ev.signal}: ${ev.n} rival causes${ev.remembered_rejections ? ' · ' + ev.remembered_rejections + ' remembered' : ''}`); }
+      if (a === 'memory') { shoot('memory', 'investigator', C.amber, 5, 600); flash('memory'); feed('iv', `memory: skipped ${ev.hypothesis} for ${ev.signal} (rejected earlier)`); }
+      if (a === 'skeptic') { lastAgent = 'skeptic'; activate('investigator', false); activate('skeptic', true); counters.tests++; if (ev.what === 'support') counters.sup++; if (ev.what === 'reject') counters.rej++; paint();
+        const col = ev.what === 'support' ? C.lime : ev.what === 'reject' ? C.red : C.amber; shoot('investigator', 'skeptic', col, 5, 700); flash('skeptic', col); badge('skeptic', counters.tests);
+        feed(ev.what === 'support' ? 'sup' : ev.what === 'reject' ? 'rej' : 'unc', `${ev.what.toUpperCase().padEnd(9)} ${ev.signal} · ${ev.label || ev.hypothesis} — ${ev.reason || ''}`); }
+      if (a === 'planner') { lastAgent = 'planner'; activate('skeptic', false); activate('planner', true); shoot('skeptic', 'planner', C.lime, 5, 700); flash('planner'); feed('pl', `planner ${ev.signal}: ${ev.what}${ev.first ? ' → ' + ev.first : ''}`); }
+      if (a === 'explainer') { activate('model', false); activate('planner', false); feed('md', `explainer ${ev.signal}: ${ev.what} (${ev.model || ''})`); }
+      if (a === 'hook') { counters.sign++; paint(); shoot('planner', 'notary', C.pink, 5, 800); flash('notary'); badge('notary', counters.sign); feed('nt', `hook: ${ev.what}`); }
+      if (a === 'human') { shoot('human', 'notary', C.amber, 6, 800); flash('human', C.amber); feed('hu', `human ${ev.what} ${ev.action || ''}`); }
+      if (a === 'apply') { flash('human', C.lime); feed('hu', `apply: ${ev.what} — ${ev.message || ''}`); }
+      break; }
+  }
+}
+function burst() { const cx = 1060, cy = 280; for (let i = 0; i < 28; i++) { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); const col = [C.cyan, C.mag, C.lime, C.amber][i % 4]; c.setAttribute('r', 3); c.setAttribute('fill', col); c.setAttribute('cx', cx); c.setAttribute('cy', cy); svg.appendChild(c);
+    const ang = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 120, t0 = performance.now();
+    (function anim(now) { const u = (now - t0) / 900; if (u >= 1) { c.remove(); return; } c.setAttribute('cx', cx + Math.cos(ang) * sp * u); c.setAttribute('cy', cy + Math.sin(ang) * sp * u + 40 * u * u); c.setAttribute('opacity', 1 - u); requestAnimationFrame(anim); })(t0); } }
+
+async function showCards(runId) {
+  try {
+    const r = await (await fetch('/runs/' + runId)).json();
+    const top = r.results.slice(0, 6);
+    $('#cards').innerHTML = top.map(x => `<div class="card"><b>${esc(x.signal.label)}</b>${x.verdicts.map(v => `<span class="chip ${v.verdict}">${esc(v.hypothesis_id)}: ${esc(v.verdict)}</span>`).join('')}<div class="k" style="margin-top:6px">→ ${esc(x.actions[0] ? x.actions[0].label : 'no action')}</div></div>`).join('') || '<div class="k">no signals</div>';
+  } catch (e) { /* run may have been evicted */ }
+}
+
+// ---------- boot ----------
+async function boot() {
+  META = await (await fetch('/meta')).json();
+  document.title = META.title + ' · live';
+  $('#title').textContent = META.title; $('#question').textContent = META.question; $('#desc').textContent = META.description;
+  $('#p-data').textContent = 'data: ' + META.data_backend; $('#p-data').className = 'pill ' + (META.data_backend === 'zetaris' ? 'on' : 'warn');
+  const online = META.model && META.model.online; $('#p-model').textContent = 'model: ' + (online ? (META.model.reason_model || '').split('/').pop() : 'offline'); $('#p-model').className = 'pill ' + (online ? 'on' : 'warn');
+  build(META);
+  // Events are played back with a small gap so a run that finishes in 30 ms (DuckDB) is still watchable; a long run
+  // (Zetaris + model calls) has natural gaps and the queue stays empty. Nothing is invented: every event is real.
+  const Q = [];
+  const es = new EventSource('/events');
+  es.onmessage = e => { try { Q.push(JSON.parse(e.data)); } catch (_) {} };
+  (function drain() { const gap = Q.length > 150 ? 12 : Q.length > 40 ? 45 : 140; if (Q.length) { try { onEvent(Q.shift()); } catch (_) {} } setTimeout(drain, gap); })();
+  es.onerror = () => feed('k', '… reconnecting to the event stream');
+}
+$('#go').onclick = async () => {
+  $('#go').disabled = true; counters = {q:0, rows:0, sig:0, tests:0, sup:0, rej:0, model:0, sign:0}; paint(); $('#cards').innerHTML = '<div class="k">working…</div>';
+  Object.values(NODES).forEach(n => n.g.querySelector('.badgeg').style.display = 'none');
+  const r = await (await fetch('/ask/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).json();
+  RUN_ID = r.run_id; activate('scout', true);
+};
+$('#explain').onclick = () => { const all = Object.entries(EXPLAIN).filter(([k]) => k !== 'source').map(([k, [t, d]]) => `<div class="card"><b>${esc(t)}</b><span class="k">${esc(d)}</span></div>`).join(''); $('#cards').innerHTML = all; };
+boot();
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ from whycore.ledger import Claim, Ledger
 from whycore.memory import memory
 from whycore.model import model
 from whycore.settings import settings
+from whycore import events
 
 
 class Run:
@@ -28,7 +29,7 @@ class Run:
         self.domain = domain
         self.question = question or domain.question
         self.max_signals = max_signals or settings.max_signals
-        self.ledger = Ledger()
+        self.ledger = Ledger(run_id=self.id)
         self.results: list[dict] = []
         self.failures: list[str] = []
         self.skipped_by_memory = 0
@@ -41,11 +42,14 @@ class Run:
     def execute(self) -> "Run":
         L, D = self.ledger, self.domain
         self.status = "running"
+        events.publish("run", run_id=self.id, status="running", question=self.question, domain=D.name)
         L.step("scout", "finding signals", backend=data.mode)
         signals = D.scout(data, self.max_signals)
         signals.sort(key=lambda s: -s.score)
         signals = signals[: self.max_signals]
-        L.step("scout", f"{len(signals)} signals")
+        L.step("scout", f"{len(signals)} signals", n=len(signals))
+        for s in signals:
+            events.publish("signal", run_id=self.id, signal=s.id, label=s.label, score=s.score, rows=s.rows)
         # Signals are tested TEST_CONCURRENCY at a time. Signals that share a memory fingerprint (memory_key) stay in one
         # worker, in score order, so what one remembers the next recalls exactly as in a sequential run. Each worker
         # returns claims and steps, which go into the ledger in signal order: the ledger (and its signature) do not
@@ -84,13 +88,16 @@ class Run:
         memory.log_run(self.summary())
         for spec, fn in late:
             self._hook(spec, fn)
+        events.publish("run", run_id=self.id, status="done", summary=self.summary())
         return self
 
     def _signal(self, s) -> dict:
         """Investigator, Skeptic and Planner for one signal; returns its claims and steps instead of writing them."""
         D, t0 = self.domain, self.ledger.t0
         claims, steps, failures = [], [], []
-        step = lambda agent, what, **kw: steps.append({"t": round(time.time() - t0, 3), "agent": agent, "what": what, **kw})
+        def step(agent, what, **kw):
+            steps.append({"t": round(time.time() - t0, 3), "agent": agent, "what": what, **kw})
+            events.publish("step", run_id=self.id, agent=agent, what=what, **kw)
         s.sql_executed = s.sql_executed or data.executed(s.sql)
         claims.append(Claim(text=s.label, kind="signal", sql=s.sql, sql_executed=s.sql_executed, source=data.mode, rows=s.rows, data=s.props))
         fp = memory.fingerprint(D.name, s.id, s.props)
@@ -117,12 +124,13 @@ class Run:
             claims.append(Claim(text=f"{h.label}: {v.reason}", kind="test", sql=v.sql, sql_executed=v.sql_executed, source=data.mode,
                                 rows=v.rows, data=v.data,
                                 status={"support": "supported", "reject": "rejected", "uncertain": "uncertain"}[v.verdict]))
-            step("skeptic", v.verdict, signal=s.id, hypothesis=h.id)
+            step("skeptic", v.verdict, signal=s.id, hypothesis=h.id, label=h.label, reason=v.reason[:160], rows=v.rows)
         if hyps and not any(v.verdict == "reject" for v in verdicts):
             failures.append(f"{s.id}: Skeptic could not reject any hypothesis (rule 4 failure state)")
         memory.remember(fp, {v.hypothesis_id: v.reason for v in verdicts if v.verdict == "reject" and v.sql})
         actions = D.plan(s, verdicts, data)
         actions.sort(key=lambda a: a.priority)
+        step("planner", f"{len(actions)} draft actions", signal=s.id, first=(actions[0].label[:120] if actions else ""))
         for a in actions:
             claims.append(Claim(text=a.label, kind="action", sql=None, status="unverified", data={"priority": a.priority, "rationale": a.rationale}))
         result = {"signal": asdict(s), "hypotheses": [asdict(h) for h in hyps], "verdicts": [asdict(v) for v in verdicts],

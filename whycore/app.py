@@ -1,6 +1,6 @@
 """FastAPI surface shared by every idea. Loads app/domain.py (class `DOMAIN`) and serves one page.
 
-GET  /            UI
+GET  /            UI (report) · GET /live the animated live view
 GET  /healthz     liveness + backend/model status
 GET  /meta        domain title, question, sources, tables
 POST /ask         {question?, max_signals?} → full run
@@ -9,12 +9,16 @@ GET  /runs/{id}   full run
 POST /runs/{id}/approve  {action_id, approve}
 GET  /view/{name} a domain-declared SQL view (for the data tabs)
 GET  /memory      memory stats · DELETE /memory resets it
+POST /ask/start   start a run in the background → {run_id}; watch it on GET /events (SSE) and GET /live
+GET  /events      Server-Sent Events: every step, query and model call as it happens
+GET  /live        the live portal: the agent pipeline at work, animated
 """
 from __future__ import annotations
 import importlib, os
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from whycore import events
 from whycore.data import data
 from whycore.memory import memory
 from whycore.model import model
@@ -63,6 +67,52 @@ def ask(body: Ask):
     for old in sorted(RUNS.values(), key=lambda r: r.created)[:-KEEP_RUNS]:   # bounded: a scheduled /ask must not grow memory
         RUNS.pop(old.id, None)
     return run.to_dict()
+
+
+@app.post("/ask/start")
+def ask_start(body: Ask):
+    """Start a run in a background thread and return at once; progress streams on /events."""
+    import threading
+    run = Run(DOMAIN, body.question, body.max_signals)
+    RUNS[run.id] = run
+    for old in sorted(RUNS.values(), key=lambda r: r.created)[:-KEEP_RUNS]:
+        RUNS.pop(old.id, None)
+
+    def go():
+        try:
+            run.execute()
+        except Exception as e:
+            run.status = f"failed: {str(e)[:200]}"
+            events.publish("run", run_id=run.id, status="failed", error=str(e)[:200])
+    threading.Thread(target=go, daemon=True, name=f"run-{run.id}").start()
+    return {"run_id": run.id, "status": run.status}
+
+
+@app.get("/events")
+def event_stream():
+    """SSE feed of everything the agents do; 15 s heartbeats keep proxies from closing the connection."""
+    import json, queue
+
+    def gen():
+        q = events.subscribe()
+        try:
+            yield "retry: 2000\n\n"
+            while True:
+                try:
+                    ev = q.get(timeout=15)
+                    yield f"data: {json.dumps(ev, default=str)}\n\n"
+                except queue.Empty:
+                    yield ": ping\n\n"
+        finally:
+            events.unsubscribe(q)
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.get("/live", response_class=HTMLResponse)
+def live():
+    here = os.path.dirname(__file__)
+    with open(os.path.join(here, "static", "live.html")) as f:
+        return f.read()
 
 
 @app.get("/runs")
