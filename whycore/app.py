@@ -30,6 +30,7 @@ def load_domain():
 DOMAIN = load_domain()
 app = FastAPI(title=DOMAIN.title)
 RUNS: dict[str, Run] = {}
+KEEP_RUNS = int(os.environ.get("KEEP_RUNS", "20"))           # newest runs kept in memory (runs.jsonl keeps every summary)
 
 
 class Ask(BaseModel):
@@ -59,6 +60,8 @@ def meta():
 def ask(body: Ask):
     run = Run(DOMAIN, body.question, body.max_signals).execute()
     RUNS[run.id] = run
+    for old in sorted(RUNS.values(), key=lambda r: r.created)[:-KEEP_RUNS]:   # bounded: a scheduled /ask must not grow memory
+        RUNS.pop(old.id, None)
     return run.to_dict()
 
 
