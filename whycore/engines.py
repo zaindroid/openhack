@@ -8,11 +8,13 @@
                                 attachment, the model writes in bounded chunks with a carried-over state block instead
                                 of one ever-growing prompt. Added to the ledger as an unverified explanation claim and
                                 to run.extras["brief"] with the engine's token accounting.
-Both hooks are no-ops (recorded as such) when the sidecar is not configured or not reachable."""
+Both hooks are no-ops (recorded as such) when the sidecar is not configured or not reachable. Both read verdicts and
+actions only (`explanation_free`), so the pipeline runs them while the Explainer waits on the model. The brief is cached
+like the explanations: same model, goal and results → the stored brief, no model call."""
 from __future__ import annotations
-import time
+import hashlib, json, time
 from whycore.ledger import Claim
-from whycore.model import model
+from whycore.model import ExplainCache, model
 from whycore.settings import settings
 
 FACT_KEYS = ("kind", "algorithm", "key_bits", "negotiated_kex", "negotiated_sig", "expires", "in_use", "data_class", "purpose")
@@ -42,6 +44,9 @@ def world_model(run) -> None:
     run.ledger.step("world_model", f"{out['entities']} entities, {out['facts']} facts, {len(out['changes'])} changes since last observation")
 
 
+world_model.explanation_free = True
+
+
 def brief(run) -> None:
     e = model.ep["reason"]
     if not (model.configured and e.base):
@@ -56,8 +61,19 @@ def brief(run) -> None:
         "rejected or left uncertain, name the signal ids, and give the order of work from the first actions. "
         "Use only the facts in the attachment; never invent dates or numbers.")
     t0 = time.time()
-    out = _post("/markovian/run", {"goal": goal, "attachments": [{"name": "results.txt", "content": "\n".join(lines)}],
-                                    "chunkConfig": {"chunkSize": 3000, "maxChunks": 4, "carryoverTokens": 512},   # engine: chunkSize >= 400 framing + carryover + 1200 output
+    chunk_cfg = {"chunkSize": 3000, "maxChunks": 4, "carryoverTokens": 512}   # engine: chunkSize >= 400 framing + carryover + 1200 output
+    content = "\n".join(lines)
+    key = ExplainCache.key(e.model, "markovian:" + json.dumps(chunk_cfg, sort_keys=True) + goal, content)
+    hit = model.cache.get(key)
+    if hit:
+        keep = {**hit["meta"], "cached": True}
+        run.extras["brief"] = keep
+        run.ledger.add(Claim(text=keep["output"], kind="explanation", status="unverified",
+                             data={"engine": "markovian", "chunks": keep["chunks"], "status": keep["status"], "cached": True, **keep["model"]}))
+        run.ledger.step("brief", f"markovian {keep['status']} from cache (results sha256 {hashlib.sha256(content.encode()).hexdigest()[:12]})")
+        return
+    out = _post("/markovian/run", {"goal": goal, "attachments": [{"name": "results.txt", "content": content}],
+                                    "chunkConfig": chunk_cfg,
                                     "endpoint": {"base": e.base, "key": e.key, "model": e.model, "maxTokens": 700,
                                                  "thinkingOff": settings.model_thinking == "off" and e.route != "meterless",
                                                  "headers": {"meterless-app": settings.meterless_app, "meterless-scope": "user"}}},
@@ -67,7 +83,13 @@ def brief(run) -> None:
     keep["chunks"] = len(out.get("chunks") or [])
     keep["output"] = out.get("output", "")
     keep["model"] = {"route": e.route, "host": e.host, "model": e.model}
+    if keep["status"] == "completed" and keep["output"]:
+        model.cache.put(key, {"text": keep["output"], "meta": keep})
+    keep["cached"] = False
     run.extras["brief"] = keep
     run.ledger.add(Claim(text=keep["output"], kind="explanation", status="unverified",
                          data={"engine": "markovian", "chunks": keep["chunks"], "status": keep["status"], **keep["model"]}))
     run.ledger.step("brief", f"markovian {keep['status']} in {keep['chunks']} chunks, {time.time() - t0:.1f}s")
+
+
+brief.explanation_free = True

@@ -97,7 +97,8 @@ def view(name: str):
     if name not in DOMAIN.views:
         raise HTTPException(404, "no such view")
     res = data.run_sql(DOMAIN.views[name])
-    return {"name": name, "sql": res["sql"], "columns": res["columns"], "rows": res["rows"][:500], "rows_n": res["rows_n"]}
+    return {"name": name, "sql": res["sql"], "sql_executed": res["sql_executed"], "columns": res["columns"], "rows": res["rows"][:500],
+            "rows_n": res["rows_n"]}
 
 
 @app.get("/memory")

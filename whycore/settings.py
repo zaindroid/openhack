@@ -32,6 +32,7 @@ class Settings:
     model_fast: str = _env("MODEL_FAST", "nvidia/nemotron-3.5-lightning-30b-a3b")
     model_thinking: str = _env("MODEL_THINKING", "off")         # off: chat_template_kwargs.enable_thinking=false (Nemotron)
     model_concurrency: int = int(_env("MODEL_CONCURRENCY", "8"))
+    test_concurrency: int = int(_env("TEST_CONCURRENCY", "8"))         # signals tested in parallel (their SQL is independent)
     model_timeout_s: float = float(_env("MODEL_TIMEOUT_S", "60"))       # per call, before retry/fallback
     explain_budget_s: float = float(_env("EXPLAIN_BUDGET_S", "45"))     # whole explanation step of a run (edge cuts at 100 s)
     meterless_app: str = _env("METERLESS_APP", _env("APP_NAME", "whycore-app"))
