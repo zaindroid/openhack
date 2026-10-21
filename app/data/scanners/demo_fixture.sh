@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The demo fixture (docs/demo.md): a real, owned, throwaway TLS endpoint that starts classical-only.
 #   up       start lab-mosca-demo-tls on groundswell-net (RSA-2048, groups X25519:P-256), then rescan
-#   rescan   scan only the targets.yaml `demo:` entries; upsert their rows; reload Postgres; publish to S3
+#   rescan   scan only the targets.yaml `demo:` entries; upsert their rows; reload Postgres; publish to S3; warm the
+#            app's explanation cache (Ask until every explanation is cached)
 #   apply    what an Approve does, by hand: switch the fixture to X25519MLKEM768:X25519 (fallback if the app cannot)
 #   status   the fixture's current group list
 #   down     remove the container and its rows; the inventory must equal the copy saved by `up`
@@ -35,11 +36,22 @@ load_pg() {   # one transaction; the CSV is copied in and removed again
 
 publish() { load_pg; "$PY" "$SC/publish_s3.py" | grep current/assets; }
 
+warm() {   # ask until every explanation is answered and cached, so the on-camera Ask is instant (never "[model pending]")
+  for i in 1 2 3 4 5 6; do
+    if curl -sk --max-time 170 -X POST -H "Host: mosca.zaindroid.me" -H "Content-Type: application/json" -d '{}' https://127.0.0.1/ask |
+       "$PY" -c 'import json, sys; d = json.load(sys.stdin); m = [r["explanation_model"] for r in d["results"]]
+p = sum(1 for x in m if not x.get("ok")); c = sum(1 for x in m if x.get("cached")); e = d["summary"]["elapsed_s"]
+print(f"warm-up ask {sys.argv[1]}: {e} s, {c}/{len(m)} cached, {p} pending or failed"); sys.exit(0 if p == 0 and c == len(m) else 1)' "$i"; then return 0; fi
+  done
+  echo "WARNING: explanations still not all cached; do not record yet"; return 1
+}
+
 rescan() {
   docker run --rm --name lab-mosca-scan-demo --network "$NET" -v "$ROOT:/w:ro" -v "$INV:/inv" -w /w/app/data/scanners \
     -e INVENTORY_DIR=/inv -e TARGETS=/w/app/data/scanners/targets.yaml alpine:3.22 sh -c \
     'apk add -q python3 py3-yaml py3-cryptography openssl >/dev/null && python3 scan_tls.py --demo && chmod a+rw /inv/assets.csv /inv/probes.csv'
   publish
+  warm || true
 }
 
 case "${1:-}" in

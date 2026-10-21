@@ -41,13 +41,15 @@ attestation covers it and `verify.py` checks it.
 On servingz, from `~/apps/openhack-mosca`:
 
 ```bash
-app/data/scanners/demo_fixture.sh up        # start the fixture, scan it, reload mosca_pg, publish mosca_s3
+app/data/scanners/demo_fixture.sh up        # start the fixture, scan it, reload mosca_pg, publish mosca_s3, warm the app
 # lab-mosca needs DEMO_APPLY_URL and DEMO_APPLY_TOKEN (infra/.env, written by `up`): ~/zorc/deploy/create_lab_mosca.py
 ```
 
 1. In the UI, **Ask**. The fixture appears as LATE: `x+y = 10+1 = 11 y > 9 y left to 2035`, kex `X25519`, cert RSA-2048.
 2. **Approve** its first draft. The action shows `applied: lab-mosca-demo-tls:8443 now offers X25519MLKEM768:X25519`.
-3. `app/data/scanners/demo_fixture.sh rescan`. The handshake now reports `Negotiated TLS1.3 group: X25519MLKEM768`.
+3. `app/data/scanners/demo_fixture.sh rescan`. The handshake now reports `Negotiated TLS1.3 group: X25519MLKEM768`. The script then
+   asks the app until every explanation is cached (it prints `warm-up ask n: … 102/102 cached, 0 pending or failed`); wait
+   for that line, so the next Ask is instant and no explanation can show as pending.
 4. **Ask** again. `already_hybrid` is supported, the harvest risk is rejected, and the asset is SAFE.
 
 If the app cannot reach the fixture, `demo_fixture.sh apply` performs the same change by hand.

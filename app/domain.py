@@ -29,6 +29,7 @@ EARLIEST = min(Z, key=lambda k: Z[k])
 PQ_KEX = [m.lower() for m in ALG["pq_kex_markers"]]
 PQ_SIG = [m.lower() for m in ALG["pq_sig_markers"]]
 PQ_KEX_SQL = " OR ".join(f"LOWER(COALESCE(a.negotiated_kex, '')) LIKE '%{m}%'" for m in PQ_KEX)
+REMEMBERED = "remembered from an earlier run: "   # whycore.pipeline prefix of a recalled rejection
 NOT_VULNERABLE = {k.lower() for k, v in ALG["classical"].items() if not v.get("quantum_vulnerable", True)}
 
 
@@ -259,9 +260,18 @@ class MoscaDomain(Domain):
         sys_ = ("You explain post-quantum migration verdicts to an engineering manager in at most 110 words. Use only the numbers given. "
                 "Mosca's inequality: shelf life + migration time > years until a cryptographically relevant quantum computer ⇒ already late. "
                 "Never state when a quantum computer will exist; the anchors are policy dates.")
-        lines = [f"Asset: {signal.label}", f"Overall status: {self.status_of(verdicts)} (use exactly this word; say late only if it is LATE)"] + \
-                [f"- {v.hypothesis_id}: {v.verdict.upper()} — {v.reason}" for v in verdicts] + \
+        # Built from the evidence only: a reason recalled from memory reads as it did on the cold run, so cold and warm
+        # runs share one cached explanation (no second model call for unchanged evidence).
+        status = self.status_of(verdicts)
+        v = {t.hypothesis_id: t.verdict for t in verdicts}
+        lines = [f"Asset: {signal.label}", f"Overall status: {status} (use exactly this word; say late only if it is LATE)"] + \
+                [f"- {t.hypothesis_id}: {t.verdict.upper()} — {t.reason.removeprefix(REMEMBERED)}" for t in verdicts] + \
                 ["Draft actions: " + "; ".join(f"{a.priority}. {a.label}" for a in actions)]
+        if status == "SAFE" and v.get("already_hybrid") == "support":
+            lines.append("Why SAFE: the key exchange already negotiates a post-quantum hybrid group, so traffic recorded today cannot "
+                         "be decrypted later; the inequality no longer applies to this hop. Do not argue from its numbers.")
+        elif status.startswith("DEAD"):
+            lines.append("Why: the asset is expired or unused; retire it. Migration is not needed.")
         return sys_, "\n".join(lines)
 
     def extra_json(self, data):
