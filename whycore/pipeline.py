@@ -200,6 +200,15 @@ class Run:
                         a["applied"] = res
                         self.ledger.step("apply", "applied" if res.get("applied") else "not applied", action=action_id,
                                          message=res.get("message", ""))
+                        if res.get("applied"):
+                            # an executed change is a claim of its own, and the run is signed again so the attestation
+                            # covers it (hooks marked after_approval, e.g. app.notary:sign_run)
+                            self.ledger.add(Claim(text=f"change executed for {action_id}: {res.get('message', '')}", kind="change",
+                                                  source=res.get("executor"), status="unverified",
+                                                  data={"action": action_id, "signal": r["signal"]["id"], **res}))
+                            for spec, fn in self._hooks()[1]:
+                                if getattr(fn, "after_approval", False):
+                                    self._hook(spec, fn)
                     return a
         return None
 
