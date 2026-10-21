@@ -78,6 +78,9 @@ class Domain:
         lines.append("Actions (drafts): " + "; ".join(f"{a.priority}. {a.label}" for a in actions))
         return sys_, "\n".join(lines)
 
+    # Optional: on_approve(self, signal: dict, action: dict) -> dict | None, called only when a human approves `action`.
+    # Return {"applied": bool, "message": str}. Leave it undefined and an approval only records the decision.
+
     def extra_json(self, data: DataAccess) -> dict[str, Any]:
         """Anything the UI should show for this domain (e.g. a map centre). Optional."""
         return {}
