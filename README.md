@@ -26,7 +26,7 @@ Groundswell and Undercurrent live in their own repos.
 git checkout idea/kessler
 pip install -r requirements.txt            # + app/requirements.txt if present
 python -m whycore.evals app/evals.yaml      # deterministic checks, no key needed
-uvicorn whycore.app:app --port 8080        # UI at http://localhost:8080
+uvicorn whycore.app:app --port 8080        # report UI at :8080, animated live view at :8080/live
 # or
 cp infra/.env.example infra/.env && docker compose -f infra/docker-compose.yml up --build
 ```

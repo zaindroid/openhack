@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib, json, logging, os, threading, time
 from urllib.parse import urlparse
 from whycore.settings import settings
+from whycore import events
 
 log = logging.getLogger("whycore.model")
 PROBE_TTL = 300
@@ -178,6 +179,7 @@ class Model:
         with self._lock:
             self.calls += 1
         if not self.configured:
+            events.publish("model", role=role, route="offline", model="offline templater", ok=True, cached=False, latency_ms=0)
             return self._offline(user, json_mode), {"route": "offline", "model": "offline templater", "ok": True, "cached": False}
         chain = [self.ep[role]] + ([self.fallback[role]] if role in self.fallback else [])
         errors = []
@@ -185,6 +187,7 @@ class Model:
             k = ExplainCache.key(e.model, system, user)
             hit = self.cache.get(k)
             if hit:
+                events.publish("model", role=role, route=e.route, model=e.model, ok=True, cached=True, latency_ms=0)
                 return hit["text"], {**hit["meta"], "cached": True, "latency_ms": 0}
             body = {"model": e.model, "temperature": 0.2, "max_tokens": max_tokens,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
@@ -197,6 +200,7 @@ class Model:
                 js = self._post(e, body)
             except Exception as ex:
                 e.mark(False, str(ex)[:200]); errors.append(str(ex)[:200])
+                events.publish("model", role=role, route=e.route, model=e.model, ok=False, cached=False, error=str(ex)[:120])
                 continue
             e.mark(True)
             usage = js.get("usage", {}) or {}
@@ -207,6 +211,7 @@ class Model:
                 self.tokens += usage.get("total_tokens", 0) or 0
                 self.fallbacks += i > 0
             self.cache.put(k, {"text": text, "meta": meta})
+            events.publish("model", role=role, route=e.route, model=meta["model"], ok=True, cached=False, latency_ms=meta["latency_ms"], tokens=usage.get("total_tokens"))
             return text, {**meta, "cached": False}
         with self._lock:
             self.failures += 1

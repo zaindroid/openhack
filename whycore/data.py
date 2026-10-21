@@ -15,6 +15,7 @@ from __future__ import annotations
 import glob, logging, os, re, threading, time, uuid
 from typing import Any
 from whycore.settings import settings
+from whycore import events
 
 log = logging.getLogger("whycore.data")
 
@@ -46,8 +47,10 @@ class DataAccess:
         if len(self._executed) > 5000:
             self._executed.clear()
         self._executed[sql] = ran
+        ms = int((time.time() - t0) * 1000)
+        events.publish("query", backend=self.mode, rows_n=len(rows), elapsed_ms=ms, sql=ran.strip()[:200])
         return {"rows": rows, "columns": cols, "sql": sql, "sql_executed": ran, "source": self.mode, "rows_n": len(rows),
-                "elapsed_ms": int((time.time() - t0) * 1000)}
+                "elapsed_ms": ms}
 
     def executed(self, sql: str | None) -> str | None:
         """The statement that ran for `sql` (recorded by run_sql; a query not run in this process is mapped the same way)."""
