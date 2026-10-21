@@ -51,7 +51,7 @@ class LazarusDomain(Domain):
             " JOIN paper_entities pe ON pe.entity = qe.entity "
             " JOIN papers p ON p.paper_id = pe.paper_id JOIN fields fp ON fp.field = p.field "
             " WHERE qe.problem_id = q.problem_id AND fp.parent_field <> fq.parent_field) AS candidates "
-            "FROM problems q JOIN fields fq ON fq.field = q.field ORDER BY candidates DESC, q.year DESC"
+            "FROM problems q JOIN fields fq ON fq.field = q.field ORDER BY candidates DESC, q.year DESC, q.problem_id"
         )
         res = data.run_sql(sql)
         out = []
@@ -70,7 +70,7 @@ class LazarusDomain(Domain):
             "JOIN paper_entities pe ON pe.paper_id = p.paper_id "
             f"JOIN problem_entities qe ON qe.entity = pe.entity AND qe.problem_id = '{pid}' "
             f"WHERE f.parent_field <> (SELECT f2.parent_field FROM fields f2 WHERE f2.field = '{field}') "
-            "GROUP BY p.paper_id, p.title, p.field, p.year ORDER BY shared DESC, p.year ASC LIMIT 4"
+            "GROUP BY p.paper_id, p.title, p.field, p.year ORDER BY shared DESC, p.year ASC, p.paper_id LIMIT 4"
         )
         res = data.run_sql(sql)
         return [Hypothesis(id=r["paper_id"], label=f"{r['title']} ({r['field']}, {r['year']})",
