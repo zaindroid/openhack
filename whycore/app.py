@@ -51,7 +51,8 @@ def healthz():
 def meta():
     return {"name": DOMAIN.name, "title": DOMAIN.title, "track": DOMAIN.track, "question": DOMAIN.question,
             "description": DOMAIN.description, "sources": DOMAIN.sources, "views": list(DOMAIN.views.keys()),
-            "tables": data.tables(), "extra": DOMAIN.extra_json(data), "data_backend": data.mode, "model": model.status()}
+            "tables": data.tables(), "table_sources": data.table_sources() if data.mode == "zetaris" else {},
+            "extra": DOMAIN.extra_json(data), "data_backend": data.mode, "model": model.status()}
 
 
 @app.post("/ask")
@@ -96,7 +97,8 @@ def view(name: str):
     if name not in DOMAIN.views:
         raise HTTPException(404, "no such view")
     res = data.run_sql(DOMAIN.views[name])
-    return {"name": name, "sql": res["sql"], "columns": res["columns"], "rows": res["rows"][:500], "rows_n": res["rows_n"]}
+    return {"name": name, "sql": res["sql"], "sql_executed": res["sql_executed"], "columns": res["columns"], "rows": res["rows"][:500],
+            "rows_n": res["rows_n"]}
 
 
 @app.get("/memory")
