@@ -69,9 +69,10 @@ datastores. Replace with scanner output for a real run; same columns.
 - **Cursor** — build log in `docs/cursor-log.md` (window only).
 
 ## Demo (3 min)
-0:00 one sentence and the 2030/2035 dates · 0:25 the clock fills · 0:55 three verdicts with the inequality on screen
-(origin LATE, edge SAFE, firmware forgery) · 1:30 approve → the operator applies the hybrid group → re-scan shows
-X25519MLKEM768 · 2:05 nRF5340 signs the attestation; `verify.py` says VERIFIED; a tampered copy FAILS · 2:40 CBOM
+0:00 one sentence and the 2030/2035 dates · 0:25 the clock fills: the real estate is 8 AT RISK, 67 SAFE, 26 to retire,
+none LATE, because every long-lived hop already negotiates X25519MLKEM768 · 0:55 the demo fixture (docs/demo.md, a real
+classical-only endpoint we own) is LATE with the inequality on screen · 1:30 Approve → the hybrid group is enabled on the
+fixture → re-scan shows X25519MLKEM768 → SAFE · 2:05 nRF5340 signs the attestation; `verify.py` says VERIFIED; a tampered copy FAILS · 2:40 CBOM
 download · 2:50 sponsor line.
 
 ## Limits (stated on purpose)

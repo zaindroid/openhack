@@ -196,6 +196,27 @@ class MoscaDomain(Domain):
             acts.append(Action(f"{signal.id}-watch", f"Watch {p['name']}; re-evaluate at renewal", 3, "safe under every anchor today", {"apply": "none"}))
         return acts
 
+    def on_approve(self, signal, action):
+        """Called by whycore only when a human clicks Approve. Mosca never changes a real system: for every real asset the
+        approved draft is the operator's to apply. The single exception is the demo fixture (a throwaway container listed
+        under `demo:` in targets.yaml, docs/demo.md): its key-exchange draft is applied by switching the fixture to the
+        hybrid group, through the fixture's own token-protected control endpoint (DEMO_APPLY_URL, DEMO_APPLY_TOKEN)."""
+        p = signal["props"]
+        if "DEMO FIXTURE" not in str(p.get("note") or ""):
+            return {"applied": False, "message": "approved; real asset, so the operator applies it (Mosca changes nothing on real systems)"}
+        if not action["id"].endswith("-kex"):
+            return {"applied": False, "message": "approved; only the key-exchange draft is applied on the demo fixture"}
+        url, tok = os.environ.get("DEMO_APPLY_URL", ""), os.environ.get("DEMO_APPLY_TOKEN", "")
+        from urllib.parse import urlparse
+        if not (url and tok) or urlparse(url).hostname != p["host"]:
+            return {"applied": False, "message": "approved; DEMO_APPLY_URL does not point at this fixture, apply with demo_fixture.sh apply"}
+        import httpx
+        r = httpx.post(url.rstrip("/") + "/apply", json={"groups": "X25519MLKEM768:X25519"}, headers={"Authorization": f"Bearer {tok}"}, timeout=15)
+        r.raise_for_status()
+        st = r.json()
+        return {"applied": True, "message": f"{p['host']}:{p['port']} now offers {st['groups']} (since {st['changed_at']}); "
+                                            "re-scan to confirm the negotiated group: demo_fixture.sh rescan"}
+
     @staticmethod
     def _apply_cmd(p: dict) -> str:
         k = p["kind"]

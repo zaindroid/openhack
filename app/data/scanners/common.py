@@ -52,6 +52,24 @@ def append(rows: list[dict], source: str) -> str:
     return path
 
 
+def upsert(rows: list[dict], source: str) -> str:
+    """Write rows replacing only rows with the same asset_id (the demo fixture's re-scan); every other row is kept."""
+    path = os.path.join(OUT_DIR, "assets.csv")
+    with open(path, newline="") as f:
+        old = list(csv.DictReader(f))
+    for r in rows:
+        r.setdefault("source", source); r.setdefault("found_at", date.today().isoformat())
+        r.setdefault("in_use", True); r.setdefault("traffic_gb_month", 0)
+        r.setdefault("asset_id", asset_id(source, r))
+    new = {r["asset_id"]: {c: r.get(c, "") for c in COLS} for r in rows}
+    out = [new.pop(r["asset_id"]) if r["asset_id"] in new else r for r in old] + list(new.values())
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=COLS)
+        w.writeheader()
+        w.writerows(out)
+    return path
+
+
 def log_probe(source: str, target: str, outcome: str) -> None:
     """Targets that were probed but yielded no public-key asset (no TLS, unreachable, refused) go to probes.csv, so the
     inventory's gaps are as traceable as its rows."""

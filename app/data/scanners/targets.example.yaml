@@ -10,3 +10,12 @@ repos:
   - { path: "/path/to/infra-repo", data_class: credentials }
 firmware:
   - { path: "/path/to/build/zephyr.bin", name: "nRF5340 app image", data_class: device_lifetime }
+
+# The demo fixture (docs/demo.md): a throwaway container started by demo_fixture.sh, classical-only until an Approve.
+# Scanned only by `scan_tls.py --demo`; its rows carry "DEMO FIXTURE" and are removed by `demo_fixture.sh down`.
+demo:
+  - host: lab-mosca-demo-tls
+    port: 8443
+    name: demo fixture lab-mosca-demo-tls:8443
+    data_class: contracts
+    note: "throwaway container on servingz, RSA-2048, classical groups until approved"

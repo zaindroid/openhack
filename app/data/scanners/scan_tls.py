@@ -5,10 +5,13 @@ negotiated_sig); the client offers X25519MLKEM768:X25519:secp256r1, so the resul
 on the table.
 
 Target fields: host, port, name, data_class; optional sni (default host), starttls: postgres (send SSLRequest first),
-in_use, note. Endpoints without TLS or not reachable are written to probes.csv, not to the inventory."""
+in_use, note. Endpoints without TLS or not reachable are written to probes.csv, not to the inventory.
+
+  python scan_tls.py           every `tls:` target; replaces the earlier tls_scan rows
+  python scan_tls.py --demo    only the `demo:` targets (the demo fixture, docs/demo.md); replaces just their rows"""
 from __future__ import annotations
-import re, socket, ssl, subprocess
-from common import append, log_probe, targets
+import re, socket, ssl, subprocess, sys
+from common import append, log_probe, targets, upsert
 
 PG_SSLREQUEST = bytes.fromhex("0000000804d2162f")
 
@@ -68,8 +71,9 @@ def openssl_handshake(host: str, port: int, sni: str, starttls: str | None) -> d
 
 
 def main() -> None:
+    demo = "--demo" in sys.argv
     rows = []
-    for t in targets().get("tls", []):
+    for t in targets().get("demo" if demo else "tls", []):
         host, port = t["host"], int(t["port"]); sni = t.get("sni", host); st = t.get("starttls")
         label = f"{host}:{port}" + (f" sni={sni}" if sni != host else "")
         try:
@@ -87,8 +91,10 @@ def main() -> None:
                      "expires": info["expires"], "in_use": t.get("in_use", True), "data_class": t.get("data_class", "logs"),
                      "note": "; ".join(x for x in [f"connect {host}:{port}" if sni != host else "", f"{info['proto']} {info['cipher']}",
                                                    f"cert {info['subject']}", t.get("note", "")] if x)})
+        if demo:
+            rows[-1]["note"] = "DEMO FIXTURE (targets.yaml demo:, removed after recording); " + rows[-1]["note"]
         print(label, grp, info["cert_alg"], info["bits"], info["expires"])
-    print("written:", append(rows, "tls_scan"))
+    print("written:", upsert(rows, "tls_scan") if demo else append(rows, "tls_scan"))
 
 
 if __name__ == "__main__":
