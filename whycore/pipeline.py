@@ -181,11 +181,34 @@ class Run:
 
     # ------------------------------------------------------------------------------------------------------------
     def approve(self, action_id: str, approve: bool = True) -> dict | None:
+        """A human approves or rejects a draft. Only an approval may change anything: if the domain defines
+        on_approve(signal, action) it runs then, and what it did (or why it did nothing) is stored on the action and
+        in the ledger. Nothing is ever applied without this call."""
         for r in self.results:
             for a in r["actions"]:
                 if a["id"] == action_id:
+                    if a["status"] != "draft":
+                        return a                  # decided already; a second click does not re-apply
                     a["status"] = "approved" if approve else "rejected"
                     self.ledger.step("human", a["status"], action=action_id)
+                    hook = getattr(self.domain, "on_approve", None)
+                    if approve and hook:
+                        try:
+                            res = hook(r["signal"], a) or {"applied": False, "message": "nothing to apply automatically"}
+                        except Exception as e:
+                            res = {"applied": False, "message": f"apply failed: {str(e)[:200]}"}
+                        a["applied"] = res
+                        self.ledger.step("apply", "applied" if res.get("applied") else "not applied", action=action_id,
+                                         message=res.get("message", ""))
+                        if res.get("applied"):
+                            # an executed change is a claim of its own, and the run is signed again so the attestation
+                            # covers it (hooks marked after_approval, e.g. app.notary:sign_run)
+                            self.ledger.add(Claim(text=f"change executed for {action_id}: {res.get('message', '')}", kind="change",
+                                                  source=res.get("executor"), status="unverified",
+                                                  data={"action": action_id, "signal": r["signal"]["id"], **res}))
+                            for spec, fn in self._hooks()[1]:
+                                if getattr(fn, "after_approval", False):
+                                    self._hook(spec, fn)
                     return a
         return None
 
