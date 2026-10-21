@@ -23,13 +23,19 @@ an asset we own, measured with real handshakes; nothing is mocked:
 | control | :8080 `POST /apply`, bearer `DEMO_APPLY_TOKEN`, accepts only `X25519MLKEM768:X25519` or `X25519:P-256` |
 | listed in | `targets.yaml` under `demo:` (scanned only by `scan_tls.py --demo`); its rows carry `DEMO FIXTURE` |
 
-## How Approve applies it
+## How Approve applies it (and the guardrail)
 The Planner's draft for the fixture is "Move … to hybrid TLS 1.3 key exchange X25519MLKEM768". It stays a draft until
-a human clicks **Approve**. On approval whycore calls `MoscaDomain.on_approve`, which acts only when all of these hold:
-the asset's row says `DEMO FIXTURE`, the draft is the key-exchange one, and `DEMO_APPLY_URL` names this asset's
-host. It then posts the hybrid group list to the fixture's control endpoint. For every real asset `on_approve`
-changes nothing and says so: the operator applies the approved draft. The result is stored on the action and in the
-ledger (`apply` step).
+a human clicks **Approve**. On approval whycore calls `MoscaDomain.on_approve`, which executes a change only if both
+of these hold:
+1. The target (host:port) is on the allow-list `APPLY_ALLOW`, or `APPLY_ENABLED=true`. `demo_fixture.sh up` builds
+   the allow-list from the `demo:` entries in targets.yaml marked `apply: true`, so today it holds exactly
+   `lab-mosca-demo-tls:8443`.
+2. An executor exists for the action. The only one is the fixture's key-exchange change, posted to its
+   token-protected control endpoint.
+
+Every other approval is recorded as "approved, not executed" together with the apply command, for the operator to
+run. An executed change becomes a `change` claim in the ledger; the Notary signs the run again, so the downloaded
+attestation covers it and `verify.py` checks it.
 
 ## Recording
 On servingz, from `~/apps/openhack-mosca`:

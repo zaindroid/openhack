@@ -131,3 +131,6 @@ def attest(run_id: str, claims: list[dict]) -> dict:
 def sign_run(run) -> None:
     """whycore run hook."""
     run.extras["attestation"] = attest(run.id, run.ledger.to_dict()["claims"])
+
+
+sign_run.after_approval = True     # re-signed after an approved change is executed, so the attestation covers it

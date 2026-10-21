@@ -18,4 +18,5 @@ demo:
     port: 8443
     name: demo fixture lab-mosca-demo-tls:8443
     data_class: contracts
+    apply: true          # allow-list: an Approve may execute the hybrid-group change on this target (and nowhere else)
     note: "throwaway container on servingz, RSA-2048, classical groups until approved"

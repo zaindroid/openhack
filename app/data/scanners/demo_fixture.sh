@@ -19,6 +19,9 @@ ENV="$ROOT/infra/.env"
 token() {
   grep -q '^DEMO_APPLY_TOKEN=' "$ENV" || echo "DEMO_APPLY_TOKEN=$("$PY" -c 'import secrets; print(secrets.token_urlsafe(32))')" >> "$ENV"
   grep -q '^DEMO_APPLY_URL=' "$ENV" || echo "DEMO_APPLY_URL=http://$NAME:8080" >> "$ENV"
+  # the apply allow-list: host:port of every targets.yaml demo: entry marked `apply: true`
+  sed -i '/^APPLY_ALLOW=/d' "$ENV"
+  echo "APPLY_ALLOW=$("$PY" -c 'import sys, yaml; print(",".join(f"{t["host"]}:{t["port"]}" for t in (yaml.safe_load(open(sys.argv[1])) or {}).get("demo", []) if t.get("apply") is True))' "$SC/targets.yaml")" >> "$ENV"
   grep '^DEMO_APPLY_TOKEN=' "$ENV" | cut -d= -f2-
 }
 
@@ -72,7 +75,7 @@ PY
         || { echo "INVENTORY DIFFERS from the pre-demo copy ($INV/.pre-demo-assets.csv kept)"; exit 1; }
     fi
     publish
-    sed -i '/^DEMO_APPLY_TOKEN=/d;/^DEMO_APPLY_URL=/d' "$ENV"
-    echo "fixture removed; remove DEMO_APPLY_URL/DEMO_APPLY_TOKEN from the lab-mosca Coolify env too" ;;
+    sed -i '/^DEMO_APPLY_TOKEN=/d;/^DEMO_APPLY_URL=/d;/^APPLY_ALLOW=/d' "$ENV"
+    echo "fixture removed; remove DEMO_APPLY_URL, DEMO_APPLY_TOKEN and APPLY_ALLOW from the lab-mosca Coolify env too" ;;
   *) echo "usage: $0 up|rescan|apply|status|down"; exit 2 ;;
 esac
