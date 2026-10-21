@@ -14,9 +14,12 @@ class Settings:
     app_name: str = _env("APP_NAME", "whycore-app")
     # data: zetaris (prod) | postgres (dev) | duckdb (demo, seed CSVs)
     data_backend: str = _env("DATA_BACKEND", "duckdb")
-    zetaris_rest: str | None = _env("ZETARIS_REST")
-    zetaris_user: str | None = _env("ZETARIS_USER")
+    # Names from the organisers' Participant Setup Guide (ZETARIS_REST_URL, ZETARIS_API_KEY, ZETARIS_USERNAME) are accepted
+    # as aliases of ours. With ZETARIS_API_KEY set, the key is the bearer token and no login call is made.
+    zetaris_rest: str | None = _env("ZETARIS_REST", _env("ZETARIS_REST_URL"))
+    zetaris_user: str | None = _env("ZETARIS_USER", _env("ZETARIS_USERNAME"))
     zetaris_password: str | None = _env("ZETARIS_PASSWORD")
+    zetaris_api_key: str | None = _env("ZETARIS_API_KEY")
     zetaris_prefix: str = _env("ZETARIS_PREFIX", "")            # e.g. "kessler_pg." so table names resolve in Zetaris
     # per-table sources, e.g. "assets=mosca_s3.assets,data_classes=mosca_pg.data_classes"; tables not listed get ZETARIS_PREFIX
     zetaris_tables: str = _env("ZETARIS_TABLES", "")
