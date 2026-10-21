@@ -15,6 +15,7 @@ class Signal:
     props: dict = field(default_factory=dict)   # free-form; lat/lon shown on the map when present
     sql: str | None = None
     rows: int = 0
+    sql_executed: str | None = None      # set by the pipeline from whycore.data unless the domain sets it
 
 
 @dataclass
@@ -32,6 +33,7 @@ class TestResult:
     sql: str | None = None
     rows: int = 0
     data: dict = field(default_factory=dict)
+    sql_executed: str | None = None      # set by the pipeline from whycore.data unless the domain sets it
 
 
 @dataclass
