@@ -75,14 +75,18 @@ def resolve(role: str, route: str | None = None) -> Endpoint:
     R, ROLE = (route or _env("MODEL_ROUTE") or "").upper(), role.upper()
     pick = lambda *names: next((v for v in (_env(n) for n in names if n) if v), None)
     rn = lambda suffix: f"{R}_{suffix}" if R else None
+    # Setup Guide names: METERLESS_BASE_URL / METERLESS_RUNTIME_TOKEN / METERLESS_MODEL (meterless/auto) for the Nightshift
+    # route, NEMOTRON_MODEL for the model id on a single endpoint. They are accepted alongside ours.
+    guide_key = "METERLESS_RUNTIME_TOKEN" if R == "METERLESS" else None
+    guide_model = "METERLESS_MODEL" if R == "METERLESS" else None
     if route:   # an explicit route ignores the MODEL_* overrides (used by fallback and infra/model_hello.py)
         base = pick(rn(f"{ROLE}_BASE_URL"), rn("BASE_URL")) or (NIM_URL if R == "NIM" else None)
-        key = pick(rn(f"{ROLE}_API_KEY"), rn("API_KEY")) or ""
-        model = pick(rn(ROLE)) or DEFAULT_MODEL[role]
+        key = pick(rn(f"{ROLE}_API_KEY"), rn("API_KEY"), guide_key) or ""
+        model = pick(rn(ROLE), guide_model) or DEFAULT_MODEL[role]
     else:
         base = pick(f"MODEL_{ROLE}_BASE_URL", rn(f"{ROLE}_BASE_URL"), rn("BASE_URL"), "MODEL_BASE_URL") or (NIM_URL if R == "NIM" else None)
-        key = pick(f"MODEL_{ROLE}_API_KEY", rn(f"{ROLE}_API_KEY"), rn("API_KEY"), "MODEL_API_KEY") or ""
-        model = pick(f"MODEL_{ROLE}", rn(ROLE)) or DEFAULT_MODEL[role]
+        key = pick(f"MODEL_{ROLE}_API_KEY", rn(f"{ROLE}_API_KEY"), rn("API_KEY"), guide_key, "MODEL_API_KEY") or ""
+        model = pick(f"MODEL_{ROLE}", rn(ROLE), guide_model, "NEMOTRON_MODEL" if role == "reason" else None) or DEFAULT_MODEL[role]
     return Endpoint(role, (route or _env("MODEL_ROUTE") or ("single" if base else None)), base, key, model)
 
 
