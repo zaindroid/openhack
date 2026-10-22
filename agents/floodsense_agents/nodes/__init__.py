@@ -1,7 +1,4 @@
-"""Node placeholders. None of these call a model or a database."""
+"""Graph nodes. Each module exposes `make(deps)` returning the node function; routing helpers sit next to their node."""
+from floodsense_agents.nodes import exposure, investigator, judge, playbook, skeptic, watchers
 
-from floodsense_agents.nodes.investigator import run as investigate
-from floodsense_agents.nodes.judge import run as judge
-from floodsense_agents.nodes.skeptic import run as challenge
-
-__all__ = ["challenge", "investigate", "judge"]
+__all__ = ["watchers", "investigator", "skeptic", "exposure", "playbook", "judge"]

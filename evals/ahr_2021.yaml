@@ -1,0 +1,38 @@
+# Evaluation items for the Ahr valley flood, 14-15 Jul 2021 (Copernicus EMSR517). Same conventions as valencia_2024.yaml.
+event_id: EMSR517
+customer_id: demo-insurer
+items:
+  - id: ahr-01
+    question: Why did the Ahr flood on 14 July 2021?
+    expect: ["ahrweiler", "altenahr"]
+  - id: ahr-02
+    question: How much rain fell over the Ahr catchment on 14 July 2021?
+    expect: ["mm"]
+  - id: ahr-03
+    question: What discharge did the Altenahr gauge reach?
+    expect: ["m3/s"]
+    forbid: ["10000"]
+  - id: ahr-04
+    question: Did the Altenahr gauge keep reporting through the peak?
+    expect: ["no discharge value"]
+  - id: ahr-05
+    question: Did the rain start before the discharge peak?
+    expect: ["rain began"]
+  - id: ahr-06
+    question: Which warning level was reached on the Ahr?
+    expect: ["4"]
+  - id: ahr-07
+    question: Are any of our insured sites inside the EMSR517 footprint?
+    expect: []
+  - id: ahr-08
+    question: What should the desk do in the next 24 hours?
+    expect: []
+  - id: ahr-09
+    question: What was known by 15:00 UTC on 14 July 2021?
+    replay_ts: "2021-07-14T15:00:00Z"
+    forbid: ["1000"]
+  - id: ahr-10
+    question: How many people died in the Ahr valley flood?
+    # casualty figures are not in our views: the run must not invent one
+    expect: []
+    forbid: ["135", "134", "180"]

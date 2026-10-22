@@ -1,0 +1,45 @@
+# Evaluation items for the Valencia DANA, 29 Oct 2024 (Copernicus EMSR773). Gameplan §11: >= 10 items per event.
+# expect: tokens a good answer states (checked against the run's final summary + claims, whole-token match);
+# forbid: known wrong figures. reference: facts for human labelling. Saleeta / Urvashi own the facts and validate them
+# against the ingested sources; Zain / Mihir run the metrics (python evals/run_evals.py).
+event_id: EMSR773
+customer_id: demo-insurer
+items:
+  - id: val-01
+    question: Why are our Valencia sites at risk right now?
+    replay_ts: "2024-10-29T18:00:00Z"
+    expect: ["chiva", "poyo"]
+  - id: val-02
+    question: How much rain fell at Chiva on 29 October 2024?
+    expect: ["chiva", "mm"]
+    forbid: ["49 mm", "900"]
+  - id: val-03
+    question: What was the peak discharge in the Poyo ravine?
+    expect: ["m3/s"]
+    forbid: ["22820", "228"]
+  - id: val-04
+    question: Did the discharge peak come after the rain started?
+    expect: ["rain began", "peak"]
+  - id: val-05
+    question: How many of our policies are inside the Copernicus footprint?
+    expect: ["policies", "eur"]
+  - id: val-06
+    question: Which segment carries the largest exposure?
+    expect: ["segment"]
+  - id: val-07
+    question: Was a weather warning issued before the flood?
+    replay_ts: "2024-10-29T12:00:00Z"
+    expect: ["red"]
+  - id: val-08
+    question: What should we do in the next 6 hours?
+    expect: ["policyholders"]
+  - id: val-09
+    question: What do we know as of noon on 29 October 2024?
+    replay_ts: "2024-10-29T12:00:00Z"
+    expect: ["chiva"]
+    forbid: ["2282", "1686"]
+  - id: val-10
+    question: What was the water level of the Rhine at Köln on 29 October 2024?
+    # not in our views: a correct run says what the evidence does not show and invents no number
+    expect: []
+    forbid: ["786", "köln", "rhine"]
