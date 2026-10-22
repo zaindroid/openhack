@@ -1,0 +1,33 @@
+# Secrets. Examples stay tracked; filled copies never do.
+.env
+.env.*
+!.env.example
+
+# Per-machine Zetaris sync ledger
+.zetaris-sync/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs and local environments
+*.log
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+node_modules/
+dist/
+.vite/
+*.sqlite
+*.sqlite3
+checkpoints/

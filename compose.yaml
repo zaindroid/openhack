@@ -1,0 +1,89 @@
+# compose.yaml — runs OUR app only.
+# It never starts, stops, joins, or modifies a Zetaris stack.
+# Do not add a Zetaris service, image, volume, network, or container_name.
+# Run `python tasks.py down` in this repo. Do not docker system prune or docker volume prune.
+#
+# `name` below is not enough on its own: an exported COMPOSE_PROJECT_NAME
+# overrides it. tasks.py always passes `-p floodsense-app`, which wins.
+# It also passes `--project-directory` and `-f` so COMPOSE_FILE cannot
+# select another file. env_file `required: false` needs Compose v2.24+.
+# A missing file must not block `down` (the rag profile is optional).
+# `up` still refuses to start until api/.env, agents/.env, and ui/.env exist.
+
+name: floodsense-app
+
+services:
+  api:
+    build: ./api
+    env_file:
+      - path: ./api/.env
+        required: false
+    # Do not set REDIS_URL here. A value in this block, even an empty one,
+    # overwrites api/.env. The cache URL belongs in api/.env.
+    environment:
+      AGENTS_URL: http://agents:8100
+    ports:
+      - "127.0.0.1:${FLOODSENSE_API_PORT:-18000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - agents
+    networks:
+      - floodsense
+
+  agents:
+    build: ./agents
+    env_file:
+      - path: ./agents/.env
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - checkpoints:/data/checkpoints
+    networks:
+      - floodsense
+
+  ui:
+    build: ./ui
+    env_file:
+      - path: ./ui/.env
+        required: false
+    ports:
+      - "127.0.0.1:${FLOODSENSE_UI_PORT:-15173}:5173"
+    depends_on:
+      - api
+    networks:
+      - floodsense
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    profiles: ["rag"]
+    env_file:
+      - path: ./pgvector/.env
+        required: false
+    ports:
+      - "127.0.0.1:${FLOODSENSE_PGVECTOR_PORT:-15432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - floodsense
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["cache"]
+    # No password. The host port stays on loopback so it is not on the LAN.
+    ports:
+      - "127.0.0.1:${FLOODSENSE_REDIS_PORT:-16379}:6379"
+    networks:
+      - floodsense
+
+networks:
+  floodsense:
+    name: floodsense-app-net
+
+# Explicit names so a wrong project name cannot create zetaris-stack_* volumes.
+volumes:
+  checkpoints:
+    name: floodsense-app_checkpoints
+  pgdata:
+    name: floodsense-app_pgdata
