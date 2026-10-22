@@ -59,3 +59,26 @@ If the app cannot reach the fixture, `demo_fixture.sh apply` performs the same c
 app/data/scanners/demo_fixture.sh down      # container and rows removed; inventory must equal the pre-demo copy
 ```
 Then delete `DEMO_APPLY_URL` and `DEMO_APPLY_TOKEN` from the lab-mosca Coolify env.
+
+## The live view: cold and warm runs
+
+`/live` (private, behind Access) and `https://mosca-public.zaindroid.me` (public, read-only, pseudonymised;
+`app/public/server.py`) replay the real event stream. Measured on servingz on 2026-10-22, all 101 assets, Zetaris
+backend, model explanations served from the explanation cache (so neither run waits on Nemotron):
+
+| run | memory at start | server time | tests run | skipped by memory | rejected (Skeptic) | on-screen playback |
+|---|---|---|---|---|---|---|
+| cold (`18f40075`) | empty (`DELETE /memory`) | 1.1 s | 127 | 277 | 30 | ≈ 25 s |
+| warm | 30 rejections from the previous run | 0.81 s | 97 | 307 | 0 | ≈ 20 s |
+
+The cold run already skips 277 tests: a rival cause rejected for the first certificate is remembered and skipped for
+every later asset with the same fingerprint inside the same run. That is also why its summary reads "warm"
+(`warm = skipped_by_memory > 0` in whycore). Playback pacing is client-side (`drain()` in `whycore/static/live.html`).
+
+Before recording a cold run: back up `/srv/data/memory` (runs.jsonl, rejections.json), then `DELETE /memory`; the
+explanation cache is kept, so no explanation shows "[model pending]". The 30-minute warm timer (`POST /ask`) refills
+memory at :00 and :30.
+
+The public view has no POST/DELETE routes: visitors press "Replay latest run", which replays the last run the public
+service recorded. Host names, IPs, e-mail addresses, home directories and secret file names are replaced by stable
+pseudonyms (ssh-1, tls-4, cert-2, host-5, ip-3); SQL text and raw scan properties are dropped.
