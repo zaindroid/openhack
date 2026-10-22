@@ -35,7 +35,9 @@ app = FastAPI(title="mosca public view", docs_url=None, redoc_url=None, openapi_
 
 # ---------- pseudonyms ------------------------------------------------------------------------------------------------
 class Pseudonyms:
-    DOMAIN = re.compile(r"(?i)\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24}\b")
+    # real top-level domains only, so code names that look like domains (app.notary:sign_run, scan_tls.py) pass
+    DOMAIN = re.compile(r"(?i)\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:me|com|net|org|io|dev|de|eu|uk|co|ai|cloud|xyz|info|"
+                        r"tech|site|online|app|sh|gov|edu|local|lan|internal)\b(?![\w:])")
     IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
     IPV6 = re.compile(r"(?i)\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b")
     EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
@@ -83,7 +85,7 @@ class Pseudonyms:
             for w, p in self.words.items():
                 if w in s:
                     s = s.replace(w, p)
-            s = self.EMAIL.sub(lambda m: self._auto("email", m.group(0)), s)
+            s = self.EMAIL.sub(lambda m: m.group(0) if self._public(m.group(0).rsplit("@", 1)[1]) else self._auto("email", m.group(0)), s)
             s = self.HOME.sub("/home/~", s)
             s = self.SECRET.sub(lambda m: m.group(1) + "…", s)
             s = self.IPV4.sub(lambda m: self._auto("ip", m.group(0)), s)
