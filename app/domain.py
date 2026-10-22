@@ -43,7 +43,8 @@ class MoscaDomain(Domain):
     track = "02"
     question = "Which keys in our estate are already too late to migrate, why, and in what order do we fix them?"
     description = ("Inventory → exposure → Mosca's inequality → migration order → human approval → ML-DSA-signed attestation. "
-                   "Seed inventory is ILLUSTRATIVE; run app/data/scanners on your own hosts for a real one. Scans only assets you own.")
+                   "The inventory is a real scan of the owner's own assets (app/data/scanners, targets.yaml only), read through "
+                   "Zetaris: scan evidence from object storage, reference tables from Postgres. Scans only assets you own.")
     views = {
         "inventory": "SELECT asset_id, name, kind, algorithm, key_bits, purpose, negotiated_kex, data_class, in_use, source FROM assets ORDER BY asset_id",
         "clock": f"""SELECT a.asset_id, a.name, a.kind, a.algorithm, d.shelf_life_years AS x, m.migration_years AS y,
@@ -63,7 +64,7 @@ class MoscaDomain(Domain):
         {"name": "Certificate Transparency logs for your own domains (crt.sh)", "url": "https://crt.sh", "access": "public, read-only", "status": "scanner app/data/scanners/scan_ct.py"},
         {"name": "TLS / SSH handshakes of your own hosts", "url": "", "access": "own targets.yaml only", "status": "scanners scan_tls.py / scan_ssh.py"},
         {"name": "Repos, firmware images, configs you own", "url": "", "access": "local paths", "status": "scan_repo.py / scan_firmware.py"},
-        {"name": "Seed inventory in app/data/seed", "url": "", "access": "seed", "status": "illustrative"},
+        {"name": "Zetaris mosca_s3 + mosca_pg (scan evidence, reference tables)", "url": "", "access": "read-only SQL", "status": "live"},
     ]
 
     # ---- scout --------------------------------------------------------------------------------------------------
