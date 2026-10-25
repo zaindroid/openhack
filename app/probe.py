@@ -53,7 +53,10 @@ Tables (Spark SQL, read-only):
  migration_paths(kind, migration_years, vendor_ready, note)
  scenarios(scenario, z_year, note)
 Spark SQL notes: expires is a 'YYYY-MM-DD' string, compare with to_date(expires); add days with
-date_add(current_date(), n); key_bits is a string, compare with CAST(key_bits AS INT); in_use = true.
+date_add(current_date(), n) where n is an INT literal or CAST(m.migration_years * 365 AS INT) from a JOIN with
+migration_paths m ON m.kind = a.kind (never a subquery inside date_add); key_bits is a string, compare with
+CAST(key_bits AS INT); in_use = true. Do not UNION assets with probes (different columns); test handshakes with
+EXISTS (SELECT 1 FROM probes p WHERE p.target LIKE concat('%', a.host, '%') AND p.outcome LIKE 'no TLS%').
 Use only these tables and columns. Compare text with single quotes. No comments, no semicolons, at most 50 rows."""
 
 
