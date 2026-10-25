@@ -267,6 +267,13 @@ function onEvent(ev) {
     case 'step': {
       const a = ev.agent;
       if (a === 'scout') { lastAgent = 'scout'; activate('scout', /finding/.test(ev.what)); feed('sc', `scout: ${ev.what}`); }
+      // an idea's own agent loop (e.g. a probe round: the model proposes a check, a query decides) reports probe:true
+      if (a === 'investigator' && ev.probe) { lastAgent = 'investigator'; activate('investigator', true); shoot('investigator', 'skeptic', C.violet, 4, 500); flash('model'); counters.model++; paint();
+        feed('iv', `investigator ${ev.signal}: ${ev.what}${ev.round ? ' (round ' + ev.round + ')' : ''}`); break; }
+      if (a === 'skeptic' && ev.probe) { counters.tests++; if (ev.what === 'support') counters.sup++; if (ev.what === 'reject') counters.rej++; paint();
+        shoot('zetaris', 'skeptic', C.cyan, 4, 500); flash('skeptic', ev.what === 'support' ? C.lime : ev.what === 'reject' ? C.red : C.amber);
+        feed(ev.what === 'support' ? 'sup' : ev.what === 'reject' ? 'rej' : 'unc', `PROBE    ${ev.signal} · ${ev.label || ev.hypothesis} — ${ev.reason || ''}`); break; }
+      if (a === 'planner' && ev.probe) { flash('planner'); feed('pl', `planner ${ev.signal}: follow-up drafted → ${ev.first || ''}`); break; }
       if (a === 'investigator') { lastAgent = 'investigator'; activate('scout', false); activate('investigator', true); if (ev.remembered_rejections) { shoot('memory', 'investigator', C.amber, 5, 700); } feed('iv', `investigator ${ev.signal}: ${ev.n} rival causes${ev.remembered_rejections ? ' · ' + ev.remembered_rejections + ' remembered' : ''}`); }
       if (a === 'memory') { shoot('memory', 'investigator', C.amber, 5, 600); flash('memory'); feed('iv', `memory: skipped ${ev.hypothesis} for ${ev.signal} (rejected earlier)`); }
       if (a === 'skeptic') { lastAgent = 'skeptic'; activate('investigator', false); activate('skeptic', true); counters.tests++; if (ev.what === 'support') counters.sup++; if (ev.what === 'reject') counters.rej++; paint();
