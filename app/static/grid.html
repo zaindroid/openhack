@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mosca · estate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root { --bg:#f6f7f9; --surface:#ffffff; --line:#e3e6eb; --line2:#eef0f3; --text:#141821; --muted:#5f6878; --faint:#8a93a3;
+          --accent:#1f5eff; --ok:#15803d; --bad:#b42318; --warn:#b54708; --retire:#6b7280; --violet:#5b4bc4; --teal:#0e7490;
+          --bad-bg:#fef3f2; --warn-bg:#fffaeb; --ok-bg:#ecfdf3; --retire-bg:#f2f4f7; --accent-bg:#eef4ff;
+          --shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06); --lift:0 10px 28px rgba(16,24,40,.12); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0f1115; --surface:#161a21; --line:#262b35; --line2:#1d222b; --text:#e7e9ee; --muted:#9aa3b2; --faint:#6b7380;
+          --accent:#5b8cff; --ok:#4ade80; --bad:#f97066; --warn:#fdb022; --retire:#98a2b3; --violet:#a59bf0; --teal:#5fc7d9;
+          --bad-bg:#2a1615; --warn-bg:#2a2010; --ok-bg:#10241a; --retire-bg:#1d222b; --accent-bg:#17213a;
+          --shadow:none; --lift:0 10px 28px rgba(0,0,0,.45); } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x:hidden; }
+  button { font:inherit; color:inherit; }
+  header { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; padding:12px 24px; border-bottom:1px solid var(--line); background:var(--surface); position:sticky; top:0; z-index:20; }
+  header h1 { margin:0; font-size:16px; font-weight:600; }
+  header .q { color:var(--muted); font-size:13px; flex:1; min-width:200px; }
+  .pill { font:500 12px Inter, sans-serif; padding:3px 10px; border:1px solid var(--line); border-radius:6px; color:var(--muted); white-space:nowrap; }
+  .pill::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--faint); margin-right:6px; vertical-align:1px; }
+  .pill.on::before { background:var(--ok); } .pill.busy::before { background:var(--warn); animation:blink 1s infinite; }
+  @keyframes blink { 50% { opacity:.2; } }
+  .btn { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-weight:600; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .btn:disabled { opacity:.55; cursor:default; }
+  .ghost { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 12px; font-size:13px; font-weight:500; cursor:pointer; text-decoration:none; color:var(--text); white-space:nowrap; }
+  .ghost:hover { background:var(--bg); }
+  main { max-width:1600px; margin:0 auto; padding:18px 24px 48px; }
+  @media (max-width:800px) { main { padding:14px 16px 40px; } header { padding:10px 16px; } }
+
+  /* status strip */
+  .strip { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)) minmax(0,1.3fr); gap:12px; }
+  @media (max-width:1000px) { .strip { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; cursor:pointer; text-align:left; box-shadow:var(--shadow); position:relative; overflow:hidden; transition:border-color .15s, transform .15s; }
+  .stat:hover { transform:translateY(-1px); }
+  .stat.sel { border-color:currentColor; }
+  .stat b { display:block; font-size:26px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:12px; color:var(--muted); }
+  .stat i { position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .stat.late { color:var(--bad); } .stat.late i { background:var(--bad); }
+  .stat.risk { color:var(--warn); } .stat.risk i { background:var(--warn); }
+  .stat.retire { color:var(--retire); } .stat.retire i { background:var(--retire); }
+  .stat.safe { color:var(--ok); } .stat.safe i { background:var(--ok); }
+  .stat b, .stat span { color:inherit; } .stat span { color:var(--muted); }
+  .clock { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 14px; box-shadow:var(--shadow); }
+  .clock h4 { margin:0 0 2px; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .clock p { margin:0; font-size:12.5px; color:var(--muted); }
+  .clock code { font:500 12.5px "IBM Plex Mono", monospace; color:var(--text); }
+
+  .bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:18px 0 6px; }
+  .bar input { flex:1; min-width:180px; max-width:340px; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:7px 10px; font:inherit; color:var(--text); }
+  .bar .hint { color:var(--muted); font-size:12.5px; }
+  .progress { height:3px; background:var(--line2); border-radius:2px; overflow:hidden; margin:6px 0 0; opacity:0; transition:opacity .3s; }
+  .progress.on { opacity:1; }
+  .progress div { height:100%; width:0; background:var(--accent); transition:width .25s; }
+
+  /* lanes and assets */
+  .lane { margin-top:18px; }
+  .lane h3 { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13px; font-weight:600; color:var(--muted); }
+  .lane h3 svg { width:16px; height:16px; }
+  .lane h3 .n { font-weight:500; color:var(--faint); }
+  .field { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .asset { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .asset[hidden] { display:none; }
+  .node { width:96px; background:none; border:0; padding:4px 2px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; border-radius:10px; }
+  .node:hover { background:var(--surface); box-shadow:var(--shadow); }
+  .node:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .ico { position:relative; width:48px; height:48px; border-radius:12px; display:grid; place-items:center; background:var(--surface); border:1px solid var(--line); transition:transform .2s, background .3s; }
+  .ico svg { width:24px; height:24px; color:var(--st); transition:color .3s; }
+  .ico::after { content:""; position:absolute; inset:-5px; border-radius:15px; border:2px solid var(--st); opacity:0; }
+  .late .ico, .risk .ico { background:var(--stbg); }
+  .late .ico::after { animation:ring 1.6s ease-out infinite; }
+  .risk .ico::after { animation:ring 2.6s ease-out infinite; }
+  .retire .ico { border-style:dashed; }
+  @keyframes ring { 0% { opacity:.65; transform:scale(.92); } 100% { opacity:0; transform:scale(1.25); } }
+  .late { --st:var(--bad); --stbg:var(--bad-bg); } .risk { --st:var(--warn); --stbg:var(--warn-bg); }
+  .retire { --st:var(--retire); --stbg:var(--retire-bg); } .safe { --st:var(--ok); --stbg:var(--ok-bg); }
+  .dot { position:absolute; right:-4px; top:-4px; width:16px; height:16px; border-radius:50%; background:var(--surface); display:grid; place-items:center; border:1px solid var(--line); }
+  .dot svg { width:10px; height:10px; color:var(--st); }
+  .nm { font-size:12px; font-weight:500; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sb { font:11px "IBM Plex Mono", monospace; color:var(--muted); margin-top:-4px; white-space:nowrap; }
+  .scan .ico { animation:scan .7s ease-out; }
+  @keyframes scan { 0% { transform:scale(1); box-shadow:0 0 0 0 var(--accent); } 40% { transform:scale(1.12); box-shadow:0 0 0 6px transparent; } 100% { transform:scale(1); } }
+  .pending .ico { opacity:.45; }
+
+  /* the decision card above an asset */
+  .card { width:250px; background:var(--surface); border:1px solid var(--line); border-top:3px solid var(--st); border-radius:10px; padding:10px 12px; box-shadow:var(--shadow); position:relative; transition:transform .2s, box-shadow .2s, opacity .3s; }
+  .card:hover { box-shadow:var(--lift); transform:translateY(-2px); }
+  .card::after { content:""; position:absolute; left:50%; bottom:-7px; width:12px; height:12px; background:var(--surface); border-right:1px solid var(--line); border-bottom:1px solid var(--line); transform:translateX(-50%) rotate(45deg); }
+  .chip { display:inline-block; font:600 10.5px Inter, sans-serif; letter-spacing:.3px; padding:1px 7px; border-radius:4px; color:var(--st); background:var(--stbg); }
+  .card .why { font-size:12px; color:var(--muted); margin:6px 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .act { font-size:12.5px; font-weight:500; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .row { display:flex; gap:6px; align-items:center; }
+  .ok, .no { border-radius:7px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:var(--surface); }
+  .ok { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .ok:disabled, .no:disabled { opacity:.5; cursor:default; }
+  .card .more { margin-left:auto; font-size:12px; color:var(--accent); background:none; border:0; cursor:pointer; padding:0; }
+  .card.done { border-top-color:var(--ok); }
+  .card .res { font-size:12px; color:var(--muted); }
+  .card .res b { color:var(--ok); }
+  .card.rejected .res b { color:var(--muted); }
+  .card.pop { animation:pop .45s ease-out; }
+  @keyframes pop { 0% { transform:scale(1); } 40% { transform:scale(1.04); } 100% { transform:scale(1); } }
+
+  /* drawer */
+  .scrim { position:fixed; inset:0; background:rgba(16,24,40,.25); opacity:0; pointer-events:none; transition:opacity .2s; z-index:30; }
+  .scrim.on { opacity:1; pointer-events:auto; }
+  aside { position:fixed; top:0; right:0; bottom:0; width:min(520px, 100vw); background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--lift); transform:translateX(100%); transition:transform .25s ease; z-index:31; overflow:auto; }
+  aside.on { transform:none; }
+  aside .hd { position:sticky; top:0; background:var(--surface); padding:16px 20px 12px; border-bottom:1px solid var(--line2); display:flex; gap:12px; align-items:flex-start; }
+  aside .hd h2 { margin:0; font-size:15px; font-weight:600; word-break:break-word; }
+  aside .hd .x { margin-left:auto; }
+  aside section { padding:14px 20px; border-bottom:1px solid var(--line2); }
+  aside h5 { margin:0 0 8px; font-size:11.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px; }
+  .kv dt { color:var(--muted); } .kv dd { margin:0; font:12.5px "IBM Plex Mono", monospace; word-break:break-all; }
+  .v { padding:8px 0; border-top:1px solid var(--line2); } .v:first-of-type { border-top:0; }
+  .v .t { display:flex; gap:8px; align-items:center; font-size:13px; font-weight:500; }
+  .v .r { font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .vchip { font:600 10.5px Inter, sans-serif; padding:1px 7px; border-radius:4px; text-transform:uppercase; }
+  .vchip.support { color:var(--bad); background:var(--bad-bg); } .vchip.reject { color:var(--ok); background:var(--ok-bg); } .vchip.uncertain { color:var(--warn); background:var(--warn-bg); }
+  details { margin-top:4px; } summary { cursor:pointer; font-size:12px; color:var(--accent); }
+  pre { font:11.5px/1.5 "IBM Plex Mono", monospace; background:var(--bg); border:1px solid var(--line2); border-radius:6px; padding:8px; white-space:pre-wrap; word-break:break-word; margin:6px 0 0; }
+  .ex { font-size:13px; white-space:pre-wrap; }
+  .ax { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line2); } .ax:first-of-type { border-top:0; }
+  .ax .l { flex:1; font-size:13px; } .ax .l small { display:block; color:var(--muted); font-size:12px; }
+  .ax .s { font-size:12px; color:var(--muted); white-space:nowrap; }
+  .mosca svg { width:100%; height:auto; display:block; }
+  .mosca text { font:11px Inter, sans-serif; fill:var(--muted); }
+  .mosca .seg { transition:width .8s cubic-bezier(.2,.8,.2,1); }
+  .toasts { position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:40; }
+  .toast { background:var(--text); color:var(--bg); padding:10px 14px; border-radius:8px; font-size:13px; box-shadow:var(--lift); max-width:360px; animation:tin .25s ease-out; }
+  @keyframes tin { from { opacity:0; transform:translateY(8px); } }
+  .empty { color:var(--muted); padding:40px 0; text-align:center; }
+  @media (prefers-reduced-motion: reduce) { .late .ico::after, .risk .ico::after, .scan .ico, .card.pop { animation:none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mosca</h1>
+  <span class="q" id="q">Which keys in the estate are already too late to migrate?</span>
+  <span class="pill" id="p-data">data</span>
+  <span class="pill" id="p-model">model</span>
+  <span class="pill" id="p-run">no run yet</span>
+  <a class="ghost" href="/">Vault view</a>
+  <a class="ghost" href="/live">Live pipeline</a>
+  <a class="ghost" id="dl-att" href="#" hidden>Attestation</a>
+  <a class="ghost" id="dl-cbom" href="#" hidden>CBOM</a>
+  <a class="ghost" href="/report">Evidence report</a>
+  <button class="btn" id="go">Run analysis</button>
+</header>
+<main>
+  <div class="strip">
+    <button class="stat late" data-f="late"><i></i><b id="c-late">–</b><span>Late: start now</span></button>
+    <button class="stat risk" data-f="risk"><i></i><b id="c-risk">–</b><span>At risk before 2030</span></button>
+    <button class="stat retire" data-f="retire"><i></i><b id="c-retire">–</b><span>To retire</span></button>
+    <button class="stat safe" data-f="safe"><i></i><b id="c-safe">–</b><span>Safe</span></button>
+    <div class="clock"><h4>The rule</h4><p>An asset is late when <code>x + y &gt; z − now</code>: x years its data must stay secret, y years to migrate, z the year a quantum computer can break it (NIST: 2030 deprecate, 2035 disallow).</p></div>
+  </div>
+  <div class="bar">
+    <input id="search" type="search" placeholder="Filter assets by name or algorithm" aria-label="Filter assets">
+    <span class="hint" id="hint"></span>
+  </div>
+  <div class="progress" id="prog"><div></div></div>
+  <div id="lanes"><div class="empty">Loading the latest run…</div></div>
+</main>
+<div class="scrim" id="scrim"></div>
+<aside id="drawer" aria-hidden="true"></aside>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const YEAR = new Date().getFullYear();
+const Z = { nist_deprecate: 2030, nist_disallow: 2035, conservative: 2040 };
+
+const I = {   // 24px stroke icons
+  ssh:  '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/>',
+  tls:  '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/>',
+  cert: '<path d="M6 3h9l4 4v8"/><path d="M6 3v15h5"/><circle cx="16" cy="17" r="3"/><path d="M14.5 19.5 14 23l2-1 2 1-.5-3.5M9 8h5M9 11h7"/>',
+  repo_key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>',
+  firmware: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  asset: '<rect x="4" y="4" width="16" height="16" rx="3"/>',
+};
+const DOT = { late:'<path d="M12 7v6M12 17h.01"/>', risk:'<path d="M12 7v6M12 17h.01"/>', retire:'<path d="M6 12h12"/>', safe:'<path d="m6 12.5 4 4 8-9"/>' };
+const svg = (p, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const LANES = [['ssh', 'SSH hosts'], ['tls', 'Web endpoints (TLS)'], ['cert', 'Certificates (CT logs)'], ['repo_key', 'Key files in repositories'], ['firmware', 'Firmware']];
+const ST = { late:'LATE', risk:'AT RISK', retire:'RETIRE', safe:'SAFE' };
+const ORDER = { late:0, risk:1, retire:2, safe:3 };
+
+let RUN = null, FILTER = null, OPEN = null;
+const TILE = {};   // asset id → element
+
+// Same rule as app/domain.py status_of: dead asset → retire; a supported quantum risk → late; an uncertain one → at risk.
+function statusOf(res) {
+  const v = Object.fromEntries(res.verdicts.map(t => [t.hypothesis_id, t.verdict]));
+  if (v.dead_asset === 'support') return 'retire';
+  const r = [v.harvest_now_decrypt_later, v.forgery_after_qday];
+  if (r.includes('support')) return 'late';
+  if (r.includes('uncertain')) return 'risk';
+  return 'safe';
+}
+function short(p) {
+  let n = String(p.name || p.asset_id);
+  n = n.replace(/^(SSH|edge|CT:|key file)\s+/i, '').replace(/^.*\//, '');
+  return n.replace(/\.zaindroid\.me$/, '') || n;
+}
+function kindOf(p) { return I[p.kind] ? p.kind : 'asset'; }
+function sub(p) { return [p.algorithm, p.key_bits].filter(Boolean).join(' '); }
+function headline(res, st) {   // the verdict that decided the status, in one line
+  const want = st === 'retire' ? ['dead_asset'] : st === 'safe' ? ['already_hybrid', 'harvest_now_decrypt_later'] : ['harvest_now_decrypt_later', 'forgery_after_qday'];
+  const v = res.verdicts.find(t => want.includes(t.hypothesis_id) && t.verdict !== 'reject') || res.verdicts[0];
+  return v ? v.reason : '';
+}
+function nextAction(res) { return res.actions.slice().sort((a, b) => a.priority - b.priority).find(a => a.status === 'draft'); }
+
+// ---------- render ----------
+function render() {
+  if (!RUN) return;
+  const counts = { late:0, risk:0, retire:0, safe:0 };
+  const items = RUN.results.map(res => ({ res, p: res.signal.props, st: statusOf(res) }));
+  items.forEach(x => counts[x.st]++);
+  for (const k in counts) $('#c-' + k).textContent = counts[k];
+  const decide = items.filter(x => x.st !== 'safe' && nextAction(x.res)).length;
+  $('#hint').textContent = `${items.length} assets · ${decide} waiting for your decision · click any asset for the evidence`;
+  const lanes = $('#lanes'); lanes.innerHTML = '';
+  for (const [k, title] of LANES.concat([['asset', 'Other']])) {
+    const xs = items.filter(x => kindOf(x.p) === k).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
+    if (!xs.length) continue;
+    const lane = document.createElement('section'); lane.className = 'lane';
+    lane.innerHTML = `<h3>${svg(I[k])}${esc(title)} <span class="n">${xs.length}</span></h3><div class="field"></div>`;
+    const field = lane.querySelector('.field');
+    for (const x of xs) field.appendChild(tile(x));
+    lanes.appendChild(lane);
+  }
+  applyFilter();
+}
+function tile({ res, p, st }) {
+  const el = document.createElement('div'); el.className = 'asset ' + st; el.dataset.id = p.asset_id; el.dataset.st = st;
+  el.dataset.q = (p.name + ' ' + sub(p) + ' ' + ST[st]).toLowerCase();
+  const a = st !== 'safe' ? nextAction(res) : null;
+  const decided = st !== 'safe' && !a ? res.actions.find(x => x.status !== 'draft') : null;
+  let card = '';
+  if (a) card = `<div class="card" data-a="${esc(a.id)}"><span class="chip">${ST[st]}</span>
+      <div class="why" title="${esc(headline(res, st))}">${esc(headline(res, st))}</div>
+      <div class="act" title="${esc(a.label)}">${esc(a.label)}</div>
+      <div class="row"><button class="ok">Approve</button><button class="no">Reject</button>${res.actions.length > 1 ? `<button class="more">+${res.actions.length - 1} more</button>` : ''}</div></div>`;
+  else if (decided) card = `<div class="card done ${decided.status}"><span class="chip">${ST[st]}</span><div class="res"><b>${esc(decided.status)}</b> · ${esc(decided.label)}${decided.applied ? '<br>' + esc(decided.applied.message || '') : ''}</div></div>`;
+  el.innerHTML = `${card}<button class="node" aria-label="${esc(p.name)}: ${ST[st]}"><span class="ico">${svg(I[kindOf(p)], 1.7)}<span class="dot">${svg(DOT[st], 3)}</span></span><span class="nm" title="${esc(p.name)}">${esc(short(p))}</span><span class="sb">${esc(sub(p))}</span></button>`;
+  el.querySelector('.node').onclick = () => openDrawer(p.asset_id);
+  if (a) {
+    el.querySelector('.ok').onclick = e => decide(e.target, p.asset_id, a.id, true);
+    el.querySelector('.no').onclick = e => decide(e.target, p.asset_id, a.id, false);
+    const m = el.querySelector('.more'); if (m) m.onclick = () => openDrawer(p.asset_id);
+  }
+  TILE[p.asset_id] = el;
+  return el;
+}
+function applyFilter() {
+  const q = $('#search').value.trim().toLowerCase();
+  document.querySelectorAll('.asset').forEach(el => el.hidden = (FILTER && el.dataset.st !== FILTER) || (q && !el.dataset.q.includes(q)));
+  document.querySelectorAll('.lane').forEach(l => l.hidden = !l.querySelector('.asset:not([hidden])'));
+  document.querySelectorAll('.stat').forEach(b => b.classList.toggle('sel', b.dataset.f === FILTER));
+}
+document.querySelectorAll('.stat').forEach(b => b.onclick = () => { FILTER = FILTER === b.dataset.f ? null : b.dataset.f; applyFilter(); });
+$('#search').oninput = applyFilter;
+
+// ---------- drawer ----------
+function moscaBar(p, st) {
+  const x = Number(p.x) || 0, y = Number(p.y) || 0, x0 = 16, x1 = 504, span = 16;
+  const X = yr => x0 + Math.min(yr - YEAR, span) / span * (x1 - x0);
+  const end = YEAR + x + y, ym = YEAR + y;
+  const marks = Object.entries(Z).map(([k, z]) => `<line x1="${X(z)}" x2="${X(z)}" y1="18" y2="64" stroke="var(--faint)" stroke-dasharray="3 3"/>
+    <text x="${X(z)}" y="12" text-anchor="middle">${z} ${k.replace('nist_', '')}</text>`).join('');
+  const hit = Object.entries(Z).filter(([, z]) => end > z).map(([k]) => k.replace('nist_', ''));
+  const verdict = p.negotiated_kex && /mlkem|sntrup|kyber/i.test(p.negotiated_kex) && st === 'safe' ? 'key exchange is already post-quantum hybrid, so this hop is safe'
+                : hit.length ? `ends after the ${hit.join(' and ')} date${hit.length > 1 ? 's' : ''}` : 'ends before every anchor';
+  return `<div class="mosca"><svg viewBox="0 0 520 112" role="img" aria-label="migration ${y} years plus secrecy ${x} years from ${YEAR}, ends ${end}">
+    ${marks}
+    <rect x="${x0}" y="28" width="0" height="16" rx="3" fill="var(--accent)" class="seg" data-w="${Math.max(2, X(ym) - x0)}"/>
+    <rect x="${X(ym)}" y="28" width="0" height="16" rx="3" fill="var(--st)" opacity=".85" class="seg" data-w="${Math.max(0, X(end) - X(ym))}"/>
+    <text x="${x0}" y="82" style="fill:var(--text)">${YEAR} now</text>
+    <text x="${x0}" y="98"><tspan style="fill:var(--accent)">■</tspan> y = ${y} y to migrate   <tspan style="fill:var(--st)">■</tspan> x = ${x} y it must stay secret / trustworthy</text>
+  </svg><p style="margin:2px 0 0;font-size:12.5px">${YEAR} + ${y} + ${x} = <b>${+end.toFixed(2)}</b>: ${esc(verdict)}.</p></div>`;
+}
+function openDrawer(id) {
+  const res = RUN.results.find(r => r.signal.id === id); if (!res) return;
+  OPEN = id; const p = res.signal.props, st = statusOf(res);
+  const d = $('#drawer'); d.className = st;
+  const kv = [['kind', p.kind], ['algorithm', sub(p)], ['purpose', p.purpose], ['negotiated key exchange', p.negotiated_kex], ['signatures offered', p.negotiated_sig],
+              ['data class', p.data_class], ['expires', p.expires], ['in use', String(p.in_use)], ['where', [p.host, p.port].filter(x => x != null && x !== '').join(':')],
+              ['found by', `${p.source} on ${p.found_at}`]].filter(([, v]) => v != null && v !== '' && v !== 'null');
+  d.innerHTML = `<div class="hd"><span class="ico" style="flex:none">${svg(I[kindOf(p)], 1.7)}</span><div><span class="chip">${ST[st]}</span><h2>${esc(p.name)}</h2></div><button class="ghost x" aria-label="Close">Close</button></div>
+    <section><h5>Mosca's inequality</h5>${moscaBar(p, st)}</section>
+    <section><h5>Actions · drafts until you approve</h5>${res.actions.map(a => `<div class="ax"><div class="l">${a.priority}. ${esc(a.label)}<small>${esc(a.rationale || '')}</small>${a.applied ? `<small>${a.applied.applied ? 'applied: ' : ''}${esc(a.applied.message || '')}</small>` : ''}</div>
+      ${a.status === 'draft' ? `<button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button>` : `<span class="s">${esc(a.status)}</span>`}</div>`).join('') || '<div class="r">no action</div>'}</section>
+    <section><h5>Why · every verdict is a number from a query</h5>${res.verdicts.map(v => `<div class="v"><div class="t"><span class="vchip ${esc(v.verdict)}">${esc(v.verdict)}</span>${esc((res.hypotheses.find(h => h.id === v.hypothesis_id) || {}).label || v.hypothesis_id)}</div>
+      <div class="r">${esc(v.reason)}</div>${v.sql_executed || v.sql ? `<details><summary>SQL that decided it (${v.rows ?? '?'} rows)</summary><pre>${esc(v.sql_executed || v.sql)}</pre></details>` : ''}</div>`).join('')}</section>
+    <section><h5>Explanation · ${esc((res.explanation_model || {}).model || 'model')}</h5><div class="ex">${esc(res.explanation || '')}</div></section>
+    <section><h5>Asset</h5><dl class="kv">${kv.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></section>`;
+  d.querySelector('.x').onclick = closeDrawer;
+  d.querySelectorAll('.ok, .no').forEach(b => b.onclick = () => decide(b, id, b.dataset.a, b.classList.contains('ok')));
+  d.classList.add('on'); d.setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('on');
+  requestAnimationFrame(() => requestAnimationFrame(() => d.querySelectorAll('.seg').forEach(r => r.setAttribute('width', r.dataset.w))));
+}
+function closeDrawer() { OPEN = null; $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); $('#scrim').classList.remove('on'); }
+$('#scrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+// ---------- decisions ----------
+async function decide(btn, assetId, actionId, ok) {
+  const runId = RUN.summary.run_id;
+  btn.closest('.card, .ax')?.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch(`/runs/${runId}/approve`, { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ action_id: actionId, approve: ok }) });
+    if (!r.ok) throw new Error(r.status === 404 ? 'this run is no longer in memory; run the analysis again' : 'HTTP ' + r.status);
+    const a = await r.json();
+    toast(ok ? (a.applied && a.applied.applied ? `Approved and applied: ${a.applied.message}. The run was signed again.` : `Approved. ${a.applied ? a.applied.message : 'Recorded in the ledger.'}`) : 'Rejected. Recorded in the ledger.');
+    await load(runId);
+    const el = TILE[assetId]; if (el) { el.querySelector('.card')?.classList.add('pop'); }
+    if (OPEN) openDrawer(OPEN);
+  } catch (e) { toast('Could not record the decision: ' + e.message); btn.closest('.card, .ax')?.querySelectorAll('button').forEach(b => b.disabled = false); }
+}
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; $('#toasts').appendChild(d); setTimeout(() => d.remove(), 5000); }
+
+// ---------- data ----------
+async function load(runId) {
+  if (!runId) { const rs = await (await fetch('/runs')).json(); runId = rs.length ? rs[0].run_id : null; }
+  if (!runId) { $('#lanes').innerHTML = '<div class="empty">No run yet. Press Run analysis.</div>'; return; }
+  const r = await fetch('/runs/' + runId); if (!r.ok) return;
+  RUN = await r.json();
+  const s = RUN.summary;
+  $('#p-run').textContent = `run ${s.run_id} · ${s.signals} assets · provenance ${s.provenance_pct}%`; $('#p-run').className = 'pill on';
+  for (const [id, name] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[name]; a.href = `/runs/${s.run_id}/extras/${name}`; }
+  render();
+}
+async function boot() {
+  const m = await (await fetch('/meta')).json();
+  $('#q').textContent = m.question;
+  $('#p-data').textContent = 'data: ' + m.data_backend; $('#p-data').className = 'pill ' + (m.data_backend === 'zetaris' ? 'on' : '');
+  const on = m.model && m.model.online; $('#p-model').textContent = 'model: ' + (on ? (m.model.reason_model || '').split('/').pop() : 'offline'); $('#p-model').className = 'pill ' + (on ? 'on' : '');
+  const anchors = ((m.extra || {}).cards || [])[0]; if (anchors && /Anchors: (.*)/.test(anchors.note)) anchors.note.match(/Anchors: (.*)/)[1].split(', ').forEach(kv => { const [k, v] = kv.split('='); if (+v) Z[k] = +v; });
+  await load();
+  listen();
+}
+
+// ---------- a run, live: every asset lights up as the agents reach it ----------
+let LIVE_RUN = null, seen = 0;
+function listen() {
+  const es = new EventSource('/events');
+  const Q = [];
+  es.onmessage = e => { try { Q.push(JSON.parse(e.data)); } catch (_) {} };
+  (function drain() { const n = Q.length > 400 ? 6 : Q.length > 100 ? 3 : 1; for (let i = 0; i < n && Q.length; i++) { try { onEv(Q.shift()); } catch (_) {} } setTimeout(drain, 16); })();
+  function onEv(ev) {
+    if (ev.type === 'run' && ev.status === 'running') { LIVE_RUN = ev.run_id; seen = 0; busy(true); }
+    if (LIVE_RUN && ev.run_id && ev.run_id !== LIVE_RUN) return;
+    if (ev.type === 'signal' && TILE[ev.signal]) TILE[ev.signal].classList.remove('pending');
+    const id = ev.signal;
+    if (id && TILE[id] && (ev.type === 'signal' || (ev.type === 'step' && ev.agent === 'skeptic'))) {
+      const el = TILE[id]; el.classList.remove('scan'); void el.offsetWidth; el.classList.add('scan');
+      if (ev.type === 'signal') { seen++; $('#prog div').style.width = Math.min(100, seen / Math.max(1, RUN ? RUN.results.length : 100) * 100) + '%'; }
+    }
+    if (ev.type === 'run' && ev.status === 'done') { busy(false); load(ev.run_id).then(() => toast(`Run ${ev.run_id} finished in ${ev.summary.elapsed_s}s. New drafts are waiting for your decision.`)); LIVE_RUN = null; }
+    if (ev.type === 'run' && ev.status === 'failed') { busy(false); toast('Run failed: ' + (ev.error || '')); LIVE_RUN = null; }
+  }
+}
+function busy(on) {
+  $('#go').disabled = on; $('#prog').classList.toggle('on', on); if (on) $('#prog div').style.width = '0';
+  if (on) { $('#p-run').textContent = 'agents working…'; $('#p-run').className = 'pill busy'; document.querySelectorAll('.asset').forEach(el => el.classList.add('pending')); }
+  else document.querySelectorAll('.asset').forEach(el => el.classList.remove('pending'));
+}
+$('#go').onclick = async () => {
+  busy(true);
+  try { const r = await (await fetch('/ask/start', { method:'POST', headers:{ 'content-type':'application/json' }, body:'{}' })).json(); LIVE_RUN = r.run_id; }
+  catch (e) { busy(false); toast('Could not start a run: ' + e.message); }
+};
+boot();
+</script>
+</body>
+</html>
