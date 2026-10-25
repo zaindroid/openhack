@@ -112,6 +112,36 @@
   #nogl { position:fixed; inset:0; display:none; place-items:center; text-align:center; color:var(--muted); }
   @media (max-width:1100px) { #left { display:none; } #feed { left:16px; } .help { left:16px; } }
   @media (max-width:760px) { #right { top:auto; bottom:14px; left:16px; right:16px; width:auto; max-height:40vh; } #feed { display:none; } header .q { display:none; } }
+  #left { width:190px; }
+  .stats { margin:0 0 12px; }
+  .legend { gap:6px; margin:0; }
+  .lg { font-size:12px; color:var(--text); }
+  .lg i { font-style:normal; width:16px; text-align:center; color:var(--c); text-shadow:0 0 8px var(--c); }
+  .rule { margin-top:10px; padding-top:8px; }
+  .rule.links { margin-top:6px; border:0; padding-top:0; } .rule a { color:var(--muted); } .rule a:hover { color:var(--core); }
+  #right { width:290px; }
+  .card .a { -webkit-line-clamp:1; margin:4px 0 6px; }
+  #feed { height:44px; font-size:11px; }
+  .tag.infra small { font-size:8px; opacity:.6; margin-right:5px; letter-spacing:1.5px; }
+  .tag.gw { color:var(--core); border-color:rgba(34,211,238,.55); background:rgba(4,30,40,.6); }
+  .tag.you { color:var(--safe); border-color:rgba(46,230,166,.5); background:rgba(4,30,22,.6); }
+  /* drawer: one sentence, one timeline, one decision; evidence on request */
+  aside { width:min(400px, 100vw); }
+  aside .dh { align-items:center; }
+  aside .dh .nm { font-size:15px; font-weight:600; } aside .dh .sb { font:11px "IBM Plex Mono", monospace; color:var(--muted); }
+  aside .x { margin-left:auto; border:0; background:none; font-size:20px; color:var(--muted); cursor:pointer; line-height:1; }
+  .say { font-size:17px; font-weight:500; line-height:1.35; color:var(--c); padding:16px 18px 6px; }
+  .rec { border:1px solid var(--line); border-radius:9px; padding:12px; background:rgba(255,255,255,.02); }
+  .rec .l { font-size:13.5px; margin:4px 0 10px; }
+  .rec .row button { padding:7px 16px; font-size:12.5px; }
+  .more { font-size:12px; color:var(--muted); margin-top:8px; }
+  .more summary, .ev summary { color:var(--muted); font-size:12px; list-style:none; }
+  .more summary:hover, .ev summary:hover { color:var(--core); }
+  .ev { padding:12px 18px 18px; }
+  .ev .v { display:block; }
+  .ev .v summary { display:flex; gap:8px; align-items:center; color:var(--text); font-size:12.5px; padding:4px 0; }
+  .ev .v .r { margin:2px 0 6px 0; }
+  .ev .meta { font:11px "IBM Plex Mono", monospace; color:var(--faint); margin-top:10px; word-break:break-all; }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
@@ -122,43 +152,40 @@
 
 <header class="hud">
   <h1>MOSCA <span>VAULT</span></h1>
-  <span class="q" id="q">Which keys are already too late to migrate?</span>
-  <span class="pill" id="p-data">data</span>
-  <span class="pill" id="p-model">model</span>
+  <span style="flex:1"></span>
+  <span class="pill" id="p-sys">connecting</span>
   <span class="pill" id="p-run">no run</span>
   <a class="ghost" href="/live">Pipeline</a>
-  <a class="ghost" href="/ui/grid">Grid view</a>
   <a class="ghost" id="dl-att" href="#" hidden>Attestation</a>
   <a class="ghost" id="dl-cbom" href="#" hidden>CBOM</a>
-  <a class="ghost" href="/report">Evidence</a>
   <button class="btn" id="go">Run analysis</button>
 </header>
 
 <div class="hud" id="left">
-  <div class="k">Estate status</div>
   <div class="stats">
-    <button class="stat late" data-f="late"><b id="c-late">–</b><span>late · start now</span></button>
-    <button class="stat risk" data-f="risk"><b id="c-risk">–</b><span>at risk by 2030</span></button>
-    <button class="stat retire" data-f="retire"><b id="c-retire">–</b><span>to retire</span></button>
+    <button class="stat late" data-f="late"><b id="c-late">–</b><span>late</span></button>
+    <button class="stat risk" data-f="risk"><b id="c-risk">–</b><span>at risk</span></button>
+    <button class="stat retire" data-f="retire"><b id="c-retire">–</b><span>retire</span></button>
     <button class="stat safe" data-f="safe"><b id="c-safe">–</b><span>safe</span></button>
   </div>
-  <div class="k">What you are looking at</div>
   <div class="legend">
-    <div class="lg"><svg viewBox="0 0 24 24"><path d="M12 3 21 19H3z" fill="none" stroke="#b18cff" stroke-width="1.8"/><circle cx="12" cy="13" r="9.5" fill="none" stroke="#b18cff" stroke-width=".8" opacity=".6"/></svg><span><b>Agents</b> · violet drones with a halo. They fly to the asset they are working on.</span></div>
-    <div class="lg"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z" fill="none" stroke="#4f8dff" stroke-width="1.8"/><path d="M7 8h10M7 13h10" stroke="#4f8dff" stroke-width=".8"/></svg><span><b>Infrastructure</b> · blue pillars: data sources, Zetaris, the model, memory.</span></div>
-    <div class="lg"><svg viewBox="0 0 24 24"><path d="M12 2 20 7v10l-8 5-8-5V7z" fill="none" stroke="#22d3ee" stroke-width="1.8"/></svg><span><b>Vault core</b> · the ML-DSA notary. It pulses when a run is signed.</span></div>
-    <div class="lg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="none" stroke="#e6edf7" stroke-width="1.8"/></svg><span><b>Assets</b> · one crystal each, coloured by status. Shape = kind: box SSH host, gem TLS endpoint, diamond certificate, ring key file.</span></div>
-    <div class="lg"><svg viewBox="0 0 24 24"><path d="M12 2v20" stroke="#ffb020" stroke-width="2"/><circle cx="12" cy="18" r="3" fill="#ffb020"/></svg><span><b>Beacons</b> · a light beam marks an asset that needs your decision.</span></div>
+    <div class="lg"><i style="--c:#b18cff">◆</i>Agents</div>
+    <div class="lg"><i style="--c:#22d3ee">⬡</i>Zetaris gateway</div>
+    <div class="lg"><i style="--c:#4f8dff">▤</i>Data sources</div>
+    <div class="lg"><i style="--c:#22d3ee">◈</i>Notary vault</div>
+    <div class="lg"><i style="--c:#e6edf7">●</i>Your assets</div>
+    <div class="lg"><i style="--c:#ffb020">┃</i>Needs a decision</div>
   </div>
-  <div class="rule">Late when <code>x + y &gt; z − now</code>: x years the data must stay secret, y years to migrate, z the quantum year (NIST 2030 deprecate, 2035 disallow).</div>
+  <div class="rule">late when <code>x + y &gt; z − now</code></div>
+  <div class="rule links"><a href="/ui/grid">grid view</a> · <a href="/report">full report</a></div>
 </div>
 
 <div class="hud" id="right">
-  <div class="hd"><span class="k">Decisions</span><b id="nq">0</b><span class="k" style="margin-left:auto">drafts until you approve</span></div>
+  <div class="hd"><span class="k">Decisions</span><b id="nq">0</b></div>
   <div id="queue"></div>
 </div>
 
-<div class="help">drag to orbit · scroll to zoom · click a crystal for its evidence</div>
+<div class="help">drag · scroll · click a crystal</div>
 <div class="hud" id="feed"></div>
 <div class="hud" id="tip"></div>
 <aside id="drawer" aria-hidden="true"></aside>
@@ -228,36 +255,79 @@ const coreRing = new THREE.Mesh(new THREE.TorusGeometry(3.3, .04, 8, 120), new T
 coreRing.rotation.x = Math.PI / 2; core.add(coreShell, coreIn, coreRing);
 const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 4.2, .5, 6), new THREE.MeshStandardMaterial({ color:0x0a1424, emissive:0x0b2236, metalness:.6, roughness:.4 }));
 pedestal.position.y = .25; scene.add(pedestal);
-label('NOTARY · ML-DSA VAULT', 'infra', new THREE.Vector3(0, 6.6, 0));
-let corePulse = 0;
+label('<small>VAULT</small>NOTARY · ML-DSA', 'infra gw', new THREE.Vector3(0, 6.6, 0));
+let corePulse = 0, gatePulse = 0;
 
-// infrastructure pillars on the perimeter
-const INFRA = {};
-function pillar(id, name, angle, r = 38, h = 7) {
-  const g = new THREE.Group(); g.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r); scene.add(g);
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, h, 6, 1, true), new THREE.MeshStandardMaterial({ color:0x0b1a33, emissive:COL.infra, emissiveIntensity:.25, transparent:true, opacity:.9, side:THREE.DoubleSide, flatShading:true }));
-  body.position.y = h / 2;
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), new THREE.LineBasicMaterial({ color:COL.infra, transparent:true, opacity:.9 })); edges.position.y = h / 2;
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, .12, 6), new THREE.MeshBasicMaterial({ color:COL.infra })); cap.position.y = h;
-  g.add(body, edges, cap);
-  INFRA[id] = { g, top:new THREE.Vector3(g.position.x, h, g.position.z), body };
-  label(name, 'infra', new THREE.Vector3(g.position.x, h + 1.6, g.position.z));
+// infrastructure, by function and tier: sources on the outer ground (tier 1) feed the Zetaris gateway (tier 2), the only
+// way data reaches the agents (tier 3); the model and memory float above (tier 4); the notary is the vault at the centre.
+const INFRA = {}, SPIN = [];
+const mat = (op = 1) => new THREE.MeshStandardMaterial({ color:0x0b1a33, emissive:COL.infra, emissiveIntensity:.35, flatShading:true, transparent:op < 1, opacity:op, side:THREE.DoubleSide });
+const edge = (geo, color = COL.infra, op = .85, deg = 25) => new THREE.LineSegments(new THREE.EdgesGeometry(geo, deg), new THREE.LineBasicMaterial({ color, transparent:true, opacity:op }));
+function solid(geo, y, g, op) { const m = new THREE.Mesh(geo, mat(op)), e = edge(geo); m.position.y = e.position.y = y; g.add(m, e); return [m, e]; }
+function source(id, name, angle, build) {
+  const g = new THREE.Group(); g.position.set(Math.cos(angle) * 44, 0, Math.sin(angle) * 44); g.lookAt(0, 0, 0); scene.add(g);
+  const h = build(g);
+  INFRA[id] = { g, top:new THREE.Vector3(g.position.x, h, g.position.z) };
+  label(`<small>SOURCE</small>${name}`, 'infra', new THREE.Vector3(g.position.x, h + 1.3, g.position.z));
 }
-pillar('zetaris', 'ZETARIS · FEDERATED SQL', -Math.PI / 2, 40, 10);
-pillar('src-ct', 'CT LOGS · crt.sh', -Math.PI / 2 - .42, 41, 6);
-pillar('src-tls', 'TLS / SSH HANDSHAKES', -Math.PI / 2 + .42, 41, 6);
-pillar('src-repo', 'REPOS · FIRMWARE', -Math.PI / 2 - .8, 42, 5);
-pillar('src-s3', 'OBJECT STORE · POSTGRES', -Math.PI / 2 + .8, 42, 5);
-pillar('human', 'YOU · APPROVE', Math.PI / 2, 40, 4);
+source('src-ct', 'CT LOGS', -Math.PI / 2 - .78, g => {           // an antenna listening to public certificate logs
+  solid(new THREE.CylinderGeometry(.12, .22, 5, 8), 2.5, g);
+  const [d, de] = solid(new THREE.ConeGeometry(1.7, .9, 28, 1, true), 5.3, g, .9); d.rotation.x = de.rotation.x = Math.PI;
+  SPIN.push([d, 'y', .5], [de, 'y', .5]); return 6;
+});
+source('src-tls', 'TLS / SSH SCANS', -Math.PI / 2 - .27, g => {  // a radar sweeping the handshakes of your own hosts
+  solid(new THREE.CylinderGeometry(1.9, 2.1, .4, 36), .2, g);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.8, 48), new THREE.MeshBasicMaterial({ color:COL.infra, transparent:true, opacity:.14, side:THREE.DoubleSide }));
+  const sweep = new THREE.Mesh(new THREE.CircleGeometry(1.8, 24, 0, .8), new THREE.MeshBasicMaterial({ color:COL.core, transparent:true, opacity:.6, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, depthWrite:false }));
+  disc.rotation.x = sweep.rotation.x = -Math.PI / 2; disc.position.y = .42; sweep.position.y = .44; g.add(disc, sweep);
+  SPIN.push([sweep, 'z', 2.4]); return 1.4;
+});
+source('src-repo', 'REPOS · FIRMWARE', -Math.PI / 2 + .27, g => { // a stack of drives
+  for (let i = 0; i < 4; i++) solid(new THREE.BoxGeometry(2.6, .45, 1.6), .3 + i * .68, g); return 3;
+});
+source('src-s3', 'OBJECT STORE · POSTGRES', -Math.PI / 2 + .78, g => { // database cylinders
+  for (let i = 0; i < 3; i++) solid(new THREE.CylinderGeometry(1.35, 1.35, .75, 32), .45 + i * 1.02, g); return 3.4;
+});
+
+// Zetaris: the gateway every query passes through, standing between the sources and the vault
+const zg = new THREE.Group(); zg.position.set(0, 8, -31); scene.add(zg); zg.lookAt(0, 8, 0);
+const gate = new THREE.Mesh(new THREE.TorusGeometry(4.2, .38, 6, 6), mat()); gate.rotation.z = Math.PI / 6;
+const gateE = edge(gate.geometry, COL.core, .9); gateE.rotation.z = Math.PI / 6;
+const gateIn = new THREE.Mesh(new THREE.TorusGeometry(3.15, .06, 8, 96), new THREE.MeshBasicMaterial({ color:COL.core, transparent:true, opacity:.85 }));
+const gateFilm = new THREE.Mesh(new THREE.CircleGeometry(3.1, 6), new THREE.MeshBasicMaterial({ color:COL.core, transparent:true, opacity:.07, side:THREE.DoubleSide, depthWrite:false }));
+gateFilm.rotation.z = Math.PI / 6;
+zg.add(gate, gateE, gateIn, gateFilm);
+const leg = new THREE.Mesh(new THREE.CylinderGeometry(.35, .7, 4, 6), mat()); leg.position.set(0, 2, -31); scene.add(leg, (() => { const e = edge(leg.geometry); e.position.copy(leg.position); return e; })());
+SPIN.push([gateIn, 'z', .9]);
+INFRA.zetaris = { top:new THREE.Vector3(0, 8, -31), gate:gateIn };
+label('<small>GATEWAY</small>ZETARIS · FEDERATED SQL', 'infra gw', new THREE.Vector3(0, 13.4, -31));
+// conduits: sources → gateway → vault, so the hierarchy is visible even when nothing is running
+function conduit(a, b, color, op, lift = 3) {
+  const mid = a.clone().lerp(b, .5); mid.y += lift;
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(new THREE.QuadraticBezierCurve3(a, mid, b).getPoints(48)),
+                              new THREE.LineDashedMaterial({ color, dashSize:.7, gapSize:.5, transparent:true, opacity:op }));
+  line.computeLineDistances(); scene.add(line);
+}
+['src-ct', 'src-tls', 'src-repo', 'src-s3'].forEach(k => conduit(INFRA[k].top, INFRA.zetaris.top, COL.infra, .4));
+conduit(INFRA.zetaris.top, new THREE.Vector3(0, 4, 0), COL.core, .35, 2);
+
+// you: an approval console at the front
+const hg = new THREE.Group(); hg.position.set(0, 0, 33); hg.lookAt(0, 0, 0); scene.add(hg);
+solid(new THREE.BoxGeometry(3.4, 1.1, 1.4), .55, hg);
+const screen = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.5), new THREE.MeshBasicMaterial({ color:COL.safe, transparent:true, opacity:.25, side:THREE.DoubleSide }));
+screen.position.set(0, 2, -.2); screen.rotation.x = -.35; hg.add(screen);
+INFRA.human = { top:new THREE.Vector3(0, 2.6, 33) };
+label('<small>YOU</small>APPROVE', 'infra you', new THREE.Vector3(0, 3.6, 33));
+
 // model + memory float above the core
 const model = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 2), new THREE.MeshBasicMaterial({ color:COL.infra, wireframe:true, transparent:true, opacity:.5 }));
 model.position.set(0, 19, 0); scene.add(model);
 INFRA.model = { top:model.position.clone() };
-label('NEMOTRON · MODEL', 'infra', new THREE.Vector3(0, 22.2, 0));
+label('<small>MODEL</small>NEMOTRON', 'infra', new THREE.Vector3(0, 22.2, 0));
 const memory = new THREE.Mesh(new THREE.TorusGeometry(5.6, .12, 10, 140), new THREE.MeshStandardMaterial({ color:0x0b1a33, emissive:COL.infra, emissiveIntensity:.9 }));
 memory.position.set(0, 9.5, 0); memory.rotation.x = Math.PI / 2; scene.add(memory);
 INFRA.memory = { top:new THREE.Vector3(5.6, 9.5, 0) };
-label('MEMORY · H-MEM', 'infra', new THREE.Vector3(-5.6, 10.6, 0));
+label('<small>MEMORY</small>H-MEM', 'infra', new THREE.Vector3(-5.6, 10.6, 0));
 
 // agents: violet tetra drones with a halo, a different shape family from everything else
 const AGENTS = {};
@@ -336,15 +406,14 @@ function buildQueue(items) {
   const q = items.filter(x => x.st !== 'safe' && nextAction(x.res)).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
   $('#nq').textContent = q.length;
   $('#queue').innerHTML = q.length ? q.map(({ res, p, st }) => { const a = nextAction(res);
-    return `<div class="card ${st}" data-id="${esc(p.asset_id)}"><div class="t"><span class="chip">${ST[st]}</span><span class="n" title="${esc(p.name)}">${esc(short(p))}</span><span class="mono" style="font-size:10.5px;color:var(--faint)">${esc(sub(p))}</span></div>
-      <div class="a" title="${esc(headline(res, st))}">${esc(a.label)}</div>
-      <div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button><button class="ghost" style="margin-left:auto;padding:3px 8px;font-size:11px" data-open>Evidence</button></div></div>`; }).join('')
-    : '<div style="color:var(--muted);padding:10px">Nothing waiting. Every draft has a decision.</div>';
+    return `<div class="card ${st}" data-id="${esc(p.asset_id)}"><div class="t"><span class="chip">${ST[st]}</span><span class="n" title="${esc(p.name)}">${esc(short(p))}</span></div>
+      <div class="a" title="${esc(a.label)}">${esc(a.label)}</div>
+      <div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div></div>`; }).join('')
+    : '<div style="color:var(--muted);padding:10px">Nothing waiting.</div>';
   $('#queue').querySelectorAll('.card').forEach(c => {
     const id = c.dataset.id;
     c.onmouseenter = () => hover(id, true); c.onmouseleave = () => hover(id, false);
-    c.querySelector('.n').onclick = () => focusAsset(id, false);
-    c.querySelector('[data-open]').onclick = () => focusAsset(id, true);
+    c.querySelector('.n').onclick = () => focusAsset(id, true);
     c.querySelectorAll('.ok, .no').forEach(b => b.onclick = () => decide(b, id, b.dataset.a, b.classList.contains('ok')));
   });
 }
@@ -421,6 +490,8 @@ function frame(now) {
   corePulse = Math.max(0, corePulse - .016);
   coreIn.material.emissiveIntensity = 1.4 + corePulse * 3; coreShell.material.opacity = .45 + corePulse * .5; coreLight.intensity = 60 + corePulse * 140;
   model.rotation.y = t * .2; memory.rotation.z = t * .15;
+  for (const [m, ax, sp] of SPIN) m.rotation[ax] = t * sp;
+  gateFilm.material.opacity = .07 + gatePulse * .35; gatePulse = Math.max(0, gatePulse - .03);
   for (const id in AGENTS) {
     const a = AGENTS[id], home = a.home(a.a0 + t * .25);
     const tgt = a.target && now < a.until ? a.target : home;
@@ -454,37 +525,42 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // ---------- drawer ----------
+const HYP = { harvest_now_decrypt_later:'Harvest now, decrypt later', forgery_after_qday:'Forgery after Q-day', already_hybrid:'Already post-quantum', dead_asset:'Not in use' };
+function say(p, st) {   // the status in one plain sentence, from the same numbers the verdicts used
+  const x = +p.x || 0, y = +p.y || 0;
+  if (st === 'retire') return 'Not in use. Retire it instead of migrating.';
+  if (st === 'safe') return /mlkem|sntrup|kyber/i.test(p.negotiated_kex || '') ? 'Already uses post-quantum key exchange.' : 'No quantum risk before the deadlines.';
+  if (st === 'late') return `Too late: migration had to start by ${+(Z.nist_disallow - x - y).toFixed(2)}.`;
+  return `Start migrating by ${+(Z.nist_deprecate - x - y).toFixed(2)} to beat ${Z.nist_deprecate}.`;
+}
 function moscaBar(p, st) {
-  const x = Number(p.x) || 0, y = Number(p.y) || 0, x0 = 16, x1 = 504, span = 16;
+  const x = +p.x || 0, y = +p.y || 0, x0 = 8, x1 = 372, span = 16;
   const X = yr => x0 + Math.min(yr - YEAR, span) / span * (x1 - x0), end = YEAR + x + y, ym = YEAR + y;
-  const marks = Object.entries(Z).map(([k, z]) => `<line x1="${X(z)}" x2="${X(z)}" y1="18" y2="64" stroke="#5b677c" stroke-dasharray="3 3"/><text x="${X(z)}" y="12" text-anchor="middle">${z} ${k.replace('nist_', '')}</text>`).join('');
-  const hit = Object.entries(Z).filter(([, z]) => end > z).map(([k]) => k.replace('nist_', ''));
   const c = '#' + COL[st].toString(16).padStart(6, '0');
-  const verdict = st === 'safe' && /mlkem|sntrup|kyber/i.test(p.negotiated_kex || '') ? 'key exchange is already post-quantum hybrid, so this hop is safe'
-                : hit.length ? `ends after the ${hit.join(' and ')} date${hit.length > 1 ? 's' : ''}` : 'ends before every anchor';
-  return `<div class="mosca"><svg viewBox="0 0 520 112">${marks}
-    <rect x="${x0}" y="28" width="0" height="16" rx="3" fill="#4f8dff" class="seg" data-w="${Math.max(2, X(ym) - x0)}"/>
-    <rect x="${X(ym)}" y="28" width="0" height="16" rx="3" fill="${c}" class="seg" data-w="${Math.max(0, X(end) - X(ym))}"/>
-    <text x="${x0}" y="82" style="fill:#e6edf7">${YEAR} now</text>
-    <text x="${x0}" y="98"><tspan style="fill:#4f8dff">■</tspan> y = ${y} y to migrate   <tspan style="fill:${c}">■</tspan> x = ${x} y it must stay secret / trustworthy</text></svg>
-    <p style="margin:2px 0 0;font-size:12px">${YEAR} + ${y} + ${x} = <b>${+end.toFixed(2)}</b>: ${esc(verdict)}.</p></div>`;
+  const marks = [Z.nist_deprecate, Z.nist_disallow].map(z => `<line x1="${X(z)}" x2="${X(z)}" y1="4" y2="30" stroke="#5b677c" stroke-dasharray="2 3"/><text x="${X(z)}" y="44" text-anchor="middle">${z}</text>`).join('');
+  return `<div class="mosca"><svg viewBox="0 0 380 50">${marks}<text x="${x0}" y="44">${YEAR}</text>
+    <rect x="${x0}" y="10" width="0" height="12" rx="3" fill="#4f8dff" class="seg" data-w="${Math.max(2, X(ym) - x0)}"><title>y = ${y} years to migrate</title></rect>
+    <rect x="${X(ym)}" y="10" width="0" height="12" rx="3" fill="${c}" class="seg" data-w="${Math.max(0, X(end) - X(ym))}"><title>x = ${x} years it must stay safe</title></rect></svg></div>`;
 }
 function openDrawer(id) {
   const o = ASSET[id]; if (!o) return; OPEN = id; const { res, p, st } = o, d = $('#drawer');
-  const kv = [['kind', p.kind], ['algorithm', sub(p)], ['purpose', p.purpose], ['key exchange', p.negotiated_kex], ['signatures offered', p.negotiated_sig], ['data class', p.data_class],
-              ['expires', p.expires], ['in use', String(p.in_use)], ['where', [p.host, p.port].filter(x => x != null && x !== '').join(':')], ['found by', `${p.source} on ${p.found_at}`]]
-             .filter(([, v]) => v != null && v !== '' && v !== 'null');
-  d.innerHTML = `<div class="dh"><div><span class="chip ${st}">${ST[st]}</span><h2>${esc(p.name)}</h2></div><button class="ghost x">Close</button></div>
-    <section><h5>Mosca's inequality</h5>${moscaBar(p, st)}</section>
-    <section><h5>Actions · drafts until you approve</h5>${res.actions.map(a => `<div class="ax"><div class="l">${a.priority}. ${esc(a.label)}<small>${esc(a.rationale || '')}</small>${a.applied ? `<small>${a.applied.applied ? 'applied: ' : ''}${esc(a.applied.message || '')}</small>` : ''}</div>
-      ${a.status === 'draft' ? `<button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button>` : `<span class="s">${esc(a.status)}</span>`}</div>`).join('') || '<div class="r">no action</div>'}</section>
-    <section><h5>Why · every verdict is a number from a query</h5>${res.verdicts.map(t => `<div class="v"><div class="t"><span class="vchip ${esc(t.verdict)}">${esc(t.verdict)}</span>${esc((res.hypotheses.find(h => h.id === t.hypothesis_id) || {}).label || t.hypothesis_id)}</div>
-      <div class="r">${esc(t.reason)}</div>${t.sql_executed || t.sql ? `<details><summary>SQL that decided it (${t.rows ?? '?'} rows)</summary><pre>${esc(t.sql_executed || t.sql)}</pre></details>` : ''}</div>`).join('')}</section>
-    <section><h5>Explanation · ${esc((res.explanation_model || {}).model || 'model')}</h5><div class="ex">${esc(res.explanation || '')}</div></section>
-    <section><h5>Asset</h5><dl class="kv">${kv.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></section>`;
+  const drafts = res.actions.slice().sort((a, b) => a.priority - b.priority), rec = drafts.find(a => a.status === 'draft'), rest = drafts.filter(a => a !== rec);
+  const btns = a => a.status === 'draft' ? `<div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div>` : `<span class="s">${esc(a.status)}${a.applied ? ' · ' + esc(a.applied.message || '') : ''}</span>`;
+  d.className = 'on ' + st;
+  d.innerHTML = `<div class="dh"><span class="chip ${st}">${ST[st]}</span><div><div class="nm">${esc(short(p))}</div><div class="sb">${esc(sub(p))}</div></div><button class="x" aria-label="Close">×</button></div>
+    <div class="say ${st}">${esc(say(p, st))}</div>
+    <section>${moscaBar(p, st)}</section>
+    <section>${rec ? `<div class="rec"><span class="k">Recommended</span><div class="l">${esc(rec.label)}</div>${btns(rec)}</div>` : drafts.length ? '' : '<span class="s">No action needed.</span>'}
+      ${rest.length ? `<details class="more"><summary>${rest.length} more action${rest.length > 1 ? 's' : ''}</summary>${rest.map(a => `<div class="ax"><div class="l">${esc(a.label)}</div>${btns(a)}</div>`).join('')}</details>` : ''}</section>
+    <details class="ev"><summary>Evidence</summary>
+      ${res.verdicts.map(t => `<details class="v"><summary><span class="vchip ${esc(t.verdict)}">${esc(t.verdict)}</span>${esc(HYP[t.hypothesis_id] || t.hypothesis_id)}</summary>
+        <div class="r">${esc(t.reason)}</div>${t.sql_executed || t.sql ? `<pre>${esc(t.sql_executed || t.sql)}</pre>` : ''}</details>`).join('')}
+      ${res.explanation ? `<div class="r" style="margin-top:10px">${esc(res.explanation.split(/(?<=\.)\s/).slice(0, 2).join(' '))}</div>` : ''}
+      <div class="meta">${esc([p.data_class, [p.host, p.port].filter(v => v != null && v !== '').join(':'), p.source].filter(Boolean).join(' · '))}</div>
+    </details>`;
   d.querySelector('.x').onclick = closeDrawer;
   d.querySelectorAll('.ok, .no').forEach(b => b.onclick = () => decide(b, id, b.dataset.a, b.classList.contains('ok')));
-  d.classList.add('on'); d.setAttribute('aria-hidden', 'false');
+  d.setAttribute('aria-hidden', 'false');
   requestAnimationFrame(() => requestAnimationFrame(() => d.querySelectorAll('.seg').forEach(r => r.setAttribute('width', r.dataset.w))));
 }
 function closeDrawer() { OPEN = null; $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); }
@@ -492,7 +568,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 
 // ---------- decisions: a human approves, the notary signs ----------
 async function decide(btn, assetId, actionId, ok) {
-  const runId = RUN.summary.run_id, box = btn.closest('.card, .ax');
+  const runId = RUN.summary.run_id, box = btn.closest('.card, .ax, .rec');
   box?.querySelectorAll('button').forEach(b => b.disabled = true);
   try {
     const r = await fetch(`/runs/${runId}/approve`, { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ action_id:actionId, approve:ok }) });
@@ -507,7 +583,7 @@ async function decide(btn, assetId, actionId, ok) {
   } catch (e) { toast('Could not record the decision: ' + e.message); box?.querySelectorAll('button').forEach(b => b.disabled = false); }
 }
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; $('#toasts').appendChild(d); setTimeout(() => d.remove(), 5500); }
-function feed(cls, t) { const f = $('#feed'), d = document.createElement('div'); d.className = cls; d.textContent = t; f.appendChild(d); while (f.children.length > 4) f.firstChild.remove(); }
+function feed(cls, t) { const f = $('#feed'), d = document.createElement('div'); d.className = cls; d.textContent = t; f.appendChild(d); while (f.children.length > 2) f.firstChild.remove(); }
 
 // ---------- data ----------
 async function load(runId) {
@@ -515,7 +591,7 @@ async function load(runId) {
   if (!runId) { $('#p-run').textContent = 'no run yet · press Run analysis'; return; }
   const r = await fetch('/runs/' + runId); if (!r.ok) return;
   RUN = await r.json(); const s = RUN.summary;
-  $('#p-run').textContent = `run ${s.run_id} · ${s.signals} assets · provenance ${s.provenance_pct}%`; $('#p-run').className = 'pill on';
+  $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill on';
   for (const [id, n] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[n]; a.href = `/runs/${s.run_id}/extras/${n}`; }
   buildAssets();
 }
@@ -529,7 +605,7 @@ function onEv(ev) {
   const sig = ev.signal;
   switch (ev.type) {
     case 'query': { const s = INFRA[srcs[Math.floor(Math.random() * srcs.length)]];
-      shot(s.top, INFRA.zetaris.top, COL.infra, 600); setTimeout(() => shot(INFRA.zetaris.top, agentPos('scout').clone(), COL.infra, 700), 450);
+      shot(s.top, INFRA.zetaris.top, COL.infra, 600); setTimeout(() => { gatePulse = 1; shot(INFRA.zetaris.top, agentPos('scout').clone(), COL.core, 700); }, 550);
       feed('in', `zetaris · ${ev.rows_n} rows · ${ev.elapsed_ms} ms`); break; }
     case 'signal': { seen++; $('#prog').style.width = Math.min(100, seen / Math.max(1, RUN ? RUN.results.length : 100) * 100) + '%';
       sendAgent('scout', sig, 700); if (ASSET[sig]) { ASSET[sig].flash = .8; shot(agentPos('scout').clone(), ASSET[sig].pos, COL.agent, 500); }
@@ -571,9 +647,8 @@ $('#go').onclick = async () => {
 
 (async function boot() {
   const m = await (await fetch('/meta')).json();
-  $('#q').textContent = m.question;
-  $('#p-data').textContent = 'data · ' + m.data_backend; $('#p-data').className = 'pill ' + (m.data_backend === 'zetaris' ? 'on' : '');
-  const on = m.model && m.model.online; $('#p-model').textContent = 'model · ' + (on ? (m.model.reason_model || '').split('/').pop() : 'offline'); $('#p-model').className = 'pill ' + (on ? 'on' : '');
+  const on = m.model && m.model.online;
+  $('#p-sys').textContent = `${m.data_backend} · ${on ? 'nemotron' : 'model offline'}`; $('#p-sys').className = 'pill ' + (m.data_backend === 'zetaris' && on ? 'on' : '');
   const c = ((m.extra || {}).cards || [])[0]; const am = c && /Anchors: (.*)/.exec(c.note || ''); if (am) am[1].split(', ').forEach(kv => { const [k, val] = kv.split('='); if (+val) Z[k] = +val; });
   await load(); listen();
 })();
