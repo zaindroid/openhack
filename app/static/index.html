@@ -271,16 +271,21 @@ $('#search').oninput = applyFilter;
 
 // ---------- drawer ----------
 function moscaBar(p, st) {
-  const x = Number(p.x) || 0, y = Number(p.y) || 0, x0 = 40, x1 = 500, span = 18;
-  const X = yr => x0 + (yr - YEAR) / span * (x1 - x0);
-  const end = Math.min(YEAR + x + y, YEAR + span);
-  const lines = Object.entries(Z).map(([k, z]) => `<line x1="${X(z)}" x2="${X(z)}" y1="14" y2="70" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${X(z)}" y="84" text-anchor="middle">${z}</text>`).join('');
-  return `<div class="mosca"><svg viewBox="0 0 520 92" role="img" aria-label="x ${x} years plus y ${y} years from ${YEAR}">
-    ${lines}<text x="${x0}" y="84" text-anchor="middle">${YEAR}</text>
-    <rect x="${x0}" y="26" width="0" height="14" rx="3" fill="var(--accent)" class="seg" data-w="${X(YEAR + Math.min(y, span)) - x0}"/>
-    <rect x="${X(YEAR + Math.min(y, span))}" y="26" width="0" height="14" rx="3" fill="var(--st)" class="seg" data-w="${Math.max(0, X(end) - X(YEAR + Math.min(y, span)))}"/>
-    <text x="${x0}" y="58" style="fill:var(--text)">y = ${y} y to migrate</text><text x="${Math.min(X(end), x1)}" y="58" text-anchor="end" style="fill:var(--text)">+ x = ${x} y secret → ${(YEAR + x + y).toFixed(1).replace(/\.0$/, '')}</text>
-  </svg></div>`;
+  const x = Number(p.x) || 0, y = Number(p.y) || 0, x0 = 16, x1 = 504, span = 16;
+  const X = yr => x0 + Math.min(yr - YEAR, span) / span * (x1 - x0);
+  const end = YEAR + x + y, ym = YEAR + y;
+  const marks = Object.entries(Z).map(([k, z]) => `<line x1="${X(z)}" x2="${X(z)}" y1="18" y2="64" stroke="var(--faint)" stroke-dasharray="3 3"/>
+    <text x="${X(z)}" y="12" text-anchor="middle">${z} ${k.replace('nist_', '')}</text>`).join('');
+  const hit = Object.entries(Z).filter(([, z]) => end > z).map(([k]) => k.replace('nist_', ''));
+  const verdict = p.negotiated_kex && /mlkem|sntrup|kyber/i.test(p.negotiated_kex) && st === 'safe' ? 'key exchange is already post-quantum hybrid, so this hop is safe'
+                : hit.length ? `ends after the ${hit.join(' and ')} date${hit.length > 1 ? 's' : ''}` : 'ends before every anchor';
+  return `<div class="mosca"><svg viewBox="0 0 520 112" role="img" aria-label="migration ${y} years plus secrecy ${x} years from ${YEAR}, ends ${end}">
+    ${marks}
+    <rect x="${x0}" y="28" width="0" height="16" rx="3" fill="var(--accent)" class="seg" data-w="${Math.max(2, X(ym) - x0)}"/>
+    <rect x="${X(ym)}" y="28" width="0" height="16" rx="3" fill="var(--st)" opacity=".85" class="seg" data-w="${Math.max(0, X(end) - X(ym))}"/>
+    <text x="${x0}" y="82" style="fill:var(--text)">${YEAR} now</text>
+    <text x="${x0}" y="98"><tspan style="fill:var(--accent)">■</tspan> y = ${y} y to migrate   <tspan style="fill:var(--st)">■</tspan> x = ${x} y it must stay secret / trustworthy</text>
+  </svg><p style="margin:2px 0 0;font-size:12.5px">${YEAR} + ${y} + ${x} = <b>${+end.toFixed(2)}</b>: ${esc(verdict)}.</p></div>`;
 }
 function openDrawer(id) {
   const res = RUN.results.find(r => r.signal.id === id); if (!res) return;
@@ -347,10 +352,13 @@ async function boot() {
 let LIVE_RUN = null, seen = 0;
 function listen() {
   const es = new EventSource('/events');
-  es.onmessage = e => {
-    let ev; try { ev = JSON.parse(e.data); } catch (_) { return; }
+  const Q = [];
+  es.onmessage = e => { try { Q.push(JSON.parse(e.data)); } catch (_) {} };
+  (function drain() { const n = Q.length > 400 ? 6 : Q.length > 100 ? 3 : 1; for (let i = 0; i < n && Q.length; i++) { try { onEv(Q.shift()); } catch (_) {} } setTimeout(drain, 16); })();
+  function onEv(ev) {
     if (ev.type === 'run' && ev.status === 'running') { LIVE_RUN = ev.run_id; seen = 0; busy(true); }
     if (LIVE_RUN && ev.run_id && ev.run_id !== LIVE_RUN) return;
+    if (ev.type === 'signal' && TILE[ev.signal]) TILE[ev.signal].classList.remove('pending');
     const id = ev.signal;
     if (id && TILE[id] && (ev.type === 'signal' || (ev.type === 'step' && ev.agent === 'skeptic'))) {
       const el = TILE[id]; el.classList.remove('scan'); void el.offsetWidth; el.classList.add('scan');
@@ -358,7 +366,7 @@ function listen() {
     }
     if (ev.type === 'run' && ev.status === 'done') { busy(false); load(ev.run_id).then(() => toast(`Run ${ev.run_id} finished in ${ev.summary.elapsed_s}s. New drafts are waiting for your decision.`)); LIVE_RUN = null; }
     if (ev.type === 'run' && ev.status === 'failed') { busy(false); toast('Run failed: ' + (ev.error || '')); LIVE_RUN = null; }
-  };
+  }
 }
 function busy(on) {
   $('#go').disabled = on; $('#prog').classList.toggle('on', on); if (on) $('#prog div').style.width = '0';
