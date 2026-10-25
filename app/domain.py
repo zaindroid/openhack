@@ -17,7 +17,7 @@ from whycore.settings import settings
 if "MAX_SIGNALS" not in os.environ:      # an inventory wants every asset evaluated, not the top five
     settings.max_signals = 1000
 if not os.environ.get("RUN_HOOKS"):      # World Model + Markovian brief, then Notary (signs the brief too) and CBOM
-    settings.run_hooks = "whycore.engines:world_model,whycore.engines:brief,app.notary:sign_run,app.cbom:attach"
+    settings.run_hooks = "whycore.engines:world_model,whycore.engines:brief,app.probe:loop,app.notary:sign_run,app.cbom:attach"
 
 HERE = os.path.dirname(__file__)
 ALG = yaml.safe_load(open(os.path.join(HERE, "algorithms.yaml")))
