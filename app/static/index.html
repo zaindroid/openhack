@@ -270,22 +270,22 @@ function source(id, name, angle, build) {
   INFRA[id] = { g, top:new THREE.Vector3(g.position.x, h, g.position.z) };
   label(`<small>SOURCE</small>${name}`, 'infra', new THREE.Vector3(g.position.x, h + 1.3, g.position.z));
 }
-source('src-ct', 'CT LOGS', -Math.PI / 2 - .78, g => {           // an antenna listening to public certificate logs
+source('src-ct', 'CT LOGS', -Math.PI / 2 - .95, g => {           // an antenna listening to public certificate logs
   solid(new THREE.CylinderGeometry(.12, .22, 5, 8), 2.5, g);
   const [d, de] = solid(new THREE.ConeGeometry(1.7, .9, 28, 1, true), 5.3, g, .9); d.rotation.x = de.rotation.x = Math.PI;
   SPIN.push([d, 'y', .5], [de, 'y', .5]); return 6;
 });
-source('src-tls', 'TLS / SSH SCANS', -Math.PI / 2 - .27, g => {  // a radar sweeping the handshakes of your own hosts
+source('src-tls', 'TLS / SSH SCANS', -Math.PI / 2 - .42, g => {  // a radar sweeping the handshakes of your own hosts
   solid(new THREE.CylinderGeometry(1.9, 2.1, .4, 36), .2, g);
   const disc = new THREE.Mesh(new THREE.CircleGeometry(1.8, 48), new THREE.MeshBasicMaterial({ color:COL.infra, transparent:true, opacity:.14, side:THREE.DoubleSide }));
   const sweep = new THREE.Mesh(new THREE.CircleGeometry(1.8, 24, 0, .8), new THREE.MeshBasicMaterial({ color:COL.core, transparent:true, opacity:.6, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, depthWrite:false }));
   disc.rotation.x = sweep.rotation.x = -Math.PI / 2; disc.position.y = .42; sweep.position.y = .44; g.add(disc, sweep);
   SPIN.push([sweep, 'z', 2.4]); return 1.4;
 });
-source('src-repo', 'REPOS · FIRMWARE', -Math.PI / 2 + .27, g => { // a stack of drives
+source('src-repo', 'REPOS · FIRMWARE', -Math.PI / 2 + .42, g => { // a stack of drives
   for (let i = 0; i < 4; i++) solid(new THREE.BoxGeometry(2.6, .45, 1.6), .3 + i * .68, g); return 3;
 });
-source('src-s3', 'OBJECT STORE · POSTGRES', -Math.PI / 2 + .78, g => { // database cylinders
+source('src-s3', 'OBJECT STORE · POSTGRES', -Math.PI / 2 + .95, g => { // database cylinders
   for (let i = 0; i < 3; i++) solid(new THREE.CylinderGeometry(1.35, 1.35, .75, 32), .45 + i * 1.02, g); return 3.4;
 });
 
@@ -321,9 +321,9 @@ label('<small>YOU</small>APPROVE', 'infra you', new THREE.Vector3(0, 3.6, 33));
 
 // model + memory float above the core
 const model = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 2), new THREE.MeshBasicMaterial({ color:COL.infra, wireframe:true, transparent:true, opacity:.5 }));
-model.position.set(0, 19, 0); scene.add(model);
+model.position.set(17, 14, -8); scene.add(model);
 INFRA.model = { top:model.position.clone() };
-label('<small>MODEL</small>NEMOTRON', 'infra', new THREE.Vector3(0, 22.2, 0));
+label('<small>MODEL</small>NEMOTRON', 'infra', new THREE.Vector3(17, 17.2, -8));
 const memory = new THREE.Mesh(new THREE.TorusGeometry(5.6, .12, 10, 140), new THREE.MeshStandardMaterial({ color:0x0b1a33, emissive:COL.infra, emissiveIntensity:.9 }));
 memory.position.set(0, 9.5, 0); memory.rotation.x = Math.PI / 2; scene.add(memory);
 INFRA.memory = { top:new THREE.Vector3(5.6, 9.5, 0) };
