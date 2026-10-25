@@ -147,6 +147,13 @@
   .ev .v summary { display:flex; gap:8px; align-items:center; color:var(--text); font-size:12.5px; padding:4px 0; }
   .ev .v .r { margin:2px 0 6px 0; }
   .ev .meta { font:11px "IBM Plex Mono", monospace; color:var(--faint); margin-top:10px; word-break:break-all; }
+  .fresh { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+  .fresh input { accent-color:var(--accent); }
+  #speed { position:fixed; left:50%; top:66px; transform:translateX(-50%); z-index:6; font:500 12px "IBM Plex Mono", monospace; color:var(--text);
+           padding:5px 12px; border-radius:20px; background:var(--panel); border:1px solid var(--line); opacity:0; transition:opacity .4s; pointer-events:none; white-space:nowrap; }
+  #speed.on { opacity:1; } #speed b { color:var(--core); font-weight:600; }
+  .pr .vchip { min-width:44px; text-align:center; }
+  .ev h6 { margin:12px 0 4px; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.3px; color:var(--muted); text-transform:uppercase; }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
@@ -164,6 +171,7 @@
   <a class="ghost" href="/live">Pipeline</a>
   <a class="ghost" id="dl-att" href="#" hidden>Attestation</a>
   <a class="ghost" id="dl-cbom" href="#" hidden>CBOM</a>
+  <label class="fresh" title="Forget what earlier runs ruled out, so every cause is tested again (your approvals are kept)"><input type="checkbox" id="fresh"> fresh memory</label>
   <button class="btn" id="go">Run analysis</button>
 </header>
 
@@ -192,6 +200,7 @@
 </div>
 
 <div class="help">drag · scroll · click a crystal</div>
+<div id="speed"></div>
 <div class="hud" id="feed"></div>
 <div class="hud" id="tip"></div>
 <aside id="drawer" aria-hidden="true"></aside>
@@ -509,19 +518,25 @@ canvas.addEventListener('pointerup', e => {
 
 // ---------- energy shots between things ----------
 const SHOTS = [];
-const dotGeo = new THREE.SphereGeometry(.16, 10, 8);
+const dotGeo = new THREE.SphereGeometry(.24, 12, 10);
 function shot(from, to, color, dur = 700, lift = null, trail = true) {
   if (!from || !to) return;
-  const m = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color, transparent:true, depthWrite:false }));
+  const m = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color, transparent:true, depthWrite:false, blending:T.dark ? THREE.AdditiveBlending : THREE.NormalBlending }));
   const mid = from.clone().lerp(to, .5); mid.y += lift ?? from.distanceTo(to) * .18;
   const curve = new THREE.QuadraticBezierCurve3(from.clone(), mid, to.clone());
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(32)), new THREE.LineBasicMaterial({ color, transparent:true, opacity:trail ? .5 : 0, depthWrite:false }));
   scene.add(m, line); SHOTS.push({ m, line, curve, t0:performance.now(), dur, op:trail ? .5 : 0 });
 }
 const agentPos = id => AGENTS[id].g.position;
-function sendAgent(id, assetId, ms = 900) {
-  const a = AGENTS[id], o = ASSET[assetId]; if (!a || !o) return;
-  a.target = o.pos.clone().add(new THREE.Vector3(0, 2.6, 0)); a.until = performance.now() + ms;
+// An agent takes a new target only after a short dwell on the last one, so it visibly flies from asset to asset
+// instead of twitching; `force` (probe rounds, model calls) always moves it.
+function sendTo(id, pos, ms = 900, force = false) {
+  const a = AGENTS[id], now = performance.now(); if (!a || !pos) return false;
+  if (!force && now < (a.busy || 0)) return false;
+  a.target = pos.clone(); a.until = now + ms; a.busy = now + 240; return true;
+}
+function sendAgent(id, assetId, ms = 900, force = false) {
+  const o = ASSET[assetId]; return o ? sendTo(id, o.pos.clone().add(new THREE.Vector3(0, 2.6, 0)), ms, force) : false;
 }
 
 // ---------- render loop ----------
@@ -543,7 +558,7 @@ function frame(now) {
   for (const id in AGENTS) {
     const a = AGENTS[id], home = a.home(a.a0 + t * .25);
     const tgt = a.target && now < a.until ? a.target : home;
-    a.g.position.lerp(tgt, a.target && now < a.until ? .14 : .05);
+    a.g.position.lerp(tgt, a.target && now < a.until ? .16 : .05);
     a.body.rotation.y = t * 2; a.body.rotation.x = t * 1.3; a.halo.rotation.x = Math.PI / 2 + Math.sin(t * 1.5) * .3; a.halo.rotation.y = t;
     a.pts.unshift(a.g.position.clone()); a.pts.length = Math.min(a.pts.length, 24);
     const pa = a.trail.geometry.attributes.position; for (let i = 0; i < 24; i++) { const p = a.pts[Math.min(i, a.pts.length - 1)]; pa.setXYZ(i, p.x, p.y, p.z); } pa.needsUpdate = true;
@@ -640,6 +655,8 @@ function openDrawer(id) {
     <details class="ev"><summary>Evidence</summary>
       ${res.verdicts.map(t => `<details class="v"><summary><span class="vchip ${tone(t)}">${ANS[t.verdict] || esc(t.verdict)}</span>${esc(HYP[t.hypothesis_id] || t.hypothesis_id)}</summary>
         <div class="r">${esc(t.reason)}</div>${t.sql_executed || t.sql ? `<pre>${esc(t.sql_executed || t.sql)}</pre>` : ''}</details>`).join('')}
+      ${(res.probes || []).length ? `<h6>Agent probes · model proposes, Zetaris decides</h6>` + res.probes.map(q => `<details class="v pr"><summary><span class="vchip ${q.verdict === 'support' ? 'support' : q.verdict === 'reject' ? 'reject' : 'uncertain'}">${q.verdict === 'support' ? 'found' : q.verdict === 'reject' ? 'none' : esc(q.verdict)}</span>${esc(q.label)}</summary>
+        <div class="r">round ${q.round} · ${esc(q.cause)} · ${q.rows ?? 0} rows${q.error ? ' · ' + esc(q.error) : ''} · ${q.cached ? 'cached answer' : esc(q.model || '')}</div>${q.sql ? `<pre>${esc(q.sql_executed || q.sql)}</pre>` : ''}</details>`).join('') : ''}
       ${res.explanation ? `<div class="r" style="margin-top:10px">${esc(res.explanation.split(/(?<=\.)\s/).slice(0, 2).join(' '))}</div>` : ''}
       <div class="meta">${esc([p.data_class, [p.host, p.port].filter(v => v != null && v !== '').join(':'), p.source].filter(Boolean).join(' · '))}</div>
     </details>`;
@@ -682,10 +699,10 @@ async function load(runId) {
 }
 
 // ---------- a run, live: agents fly to the asset they are working on ----------
-let LIVE = null, seen = 0;
+let LIVE = null, seen = 0, probes = { asked:0, run:0, found:0 };
 const srcs = ['src-ct', 'src-tls', 'src-repo', 'src-s3'];
 function onEv(ev) {
-  if (ev.type === 'run' && ev.status === 'running') { LIVE = ev.run_id; seen = 0; busy(true); feed('ag', `run ${ev.run_id} started`); }
+  if (ev.type === 'run' && ev.status === 'running') { LIVE = ev.run_id; seen = 0; probes = { asked:0, run:0, found:0 }; busy(true); feed('ag', `run ${ev.run_id} started`); }
   if (LIVE && ev.run_id && ev.run_id !== LIVE) return;
   const sig = ev.signal;
   switch (ev.type) {
@@ -699,26 +716,49 @@ function onEv(ev) {
       feed('in', `nemotron · ${ev.cached ? 'cache hit' : ev.ok ? 'answered' : 'failed'}`); break; }
     case 'step': {
       const a = ev.agent;
+      if (a === 'investigator' && sig && ev.probe) {        // the agentic loop: the investigator asks the model what to test next
+        probes.asked++;
+        sendTo('investigator', INFRA.model.top.clone().add(new THREE.Vector3(-3.5, 3, 1.5)), 700, true);
+        shot(agentPos('investigator').clone(), INFRA.model.top, COL.agent, 450); setTimeout(() => shot(INFRA.model.top, agentPos('investigator').clone(), COL.agent, 450), 420);
+        if (ev.what === 'asks the model') feed('ag', `investigator → nemotron · round ${ev.round} · ${ASSET[sig] ? short(ASSET[sig].p) : sig}`);
+        else feed('ag', `investigator · ${ev.what} · ${ASSET[sig] ? short(ASSET[sig].p) : sig}`);
+        break;
+      }
       if (a === 'investigator' && sig) { sendAgent('investigator', sig); if (ev.remembered_rejections) shot(INFRA.memory.top, agentPos('investigator').clone(), COL.infra, 600); }
       if (a === 'memory') shot(INFRA.memory.top, agentPos('investigator').clone(), COL.infra, 500);
+      if (a === 'skeptic' && sig && ev.probe) {             // the skeptic runs the model's query on Zetaris; the rows decide
+        const o = ASSET[sig], col = ev.what === 'support' ? COL.late : ev.what === 'reject' ? COL.safe : COL.risk;
+        probes.run++; if (ev.what === 'support') probes.found++;
+        sendTo('skeptic', INFRA.zetaris.top.clone().add(new THREE.Vector3(0, -3.5, 4)), 500, true);
+        gatePulse = 1; shot(INFRA.zetaris.top, agentPos('skeptic').clone(), COL.core, 450);
+        if (o) setTimeout(() => { sendAgent('skeptic', sig, 700, true); o.flash = 1; shot(INFRA.zetaris.top, o.pos, col, 650); }, 380);
+        feed(ev.what === 'support' ? 'ag' : 'in', `skeptic · ${ev.hypothesis} · ${ev.what === 'support' ? 'found' : ev.what === 'reject' ? 'not found' : ev.what}${ev.rows != null ? ' · ' + ev.rows + ' rows' : ''}`);
+        break;
+      }
       if (a === 'skeptic' && sig) { sendAgent('skeptic', sig); const o = ASSET[sig]; if (o) { o.flash = 1;
         shot(agentPos('skeptic').clone(), o.pos, ev.what === 'support' ? COL.late : ev.what === 'reject' ? COL.safe : COL.risk, 550); }
         feed('ag', `skeptic · ${ev.what} · ${ev.label || ev.hypothesis || ''}`); }
-      if (a === 'planner' && sig) sendAgent('planner', sig);
+      if (a === 'planner' && sig) { sendAgent('planner', sig, 900, !!ev.probe); if (ev.probe) feed('ag', `planner · follow-up drafted · ${ev.first || ''}`); }
       if (a === 'hook') { shot(agentPos('planner').clone(), core.position, COL.core, 800); setTimeout(() => corePulse = 1, 700); feed('in', `notary · ${ev.what}`); }
       if (a === 'human' || a === 'apply') { shot(INFRA.human.top, core.position, COL.safe, 900); feed('in', `you · ${ev.what}`); }
       break; }
     case 'run':
-      if (ev.status === 'done') { busy(false); LIVE = null; corePulse = 1; feed('ag', `done in ${ev.summary.elapsed_s}s · provenance ${ev.summary.provenance_pct}%`);
-        load(ev.run_id).then(() => toast(`Run ${ev.run_id} signed in the vault. New drafts are waiting for your decision.`)); }
+      if (ev.status === 'done') { busy(false); LIVE = null; corePulse = 1; const s = ev.summary;
+        feed('ag', `done in ${s.elapsed_s}s · provenance ${s.provenance_pct}%`);
+        // the replay is paced for people; this is what the server actually took
+        $('#speed').innerHTML = `server: <b>${s.signals} assets · ${s.tests_run} tests · ${probes.run} agent probes</b> in <b>${s.elapsed_s} s</b>`;
+        $('#speed').classList.add('on'); setTimeout(() => $('#speed').classList.remove('on'), 9000);
+        load(ev.run_id).then(() => toast(`Run ${ev.run_id} signed in the vault. ${probes.found ? probes.found + ' new findings from the agents. ' : ''}Drafts are waiting for your decision.`)); }
       if (ev.status === 'failed') { busy(false); LIVE = null; toast('Run failed: ' + (ev.error || '')); }
   }
 }
 function listen() {
   const es = new EventSource('/events'), Q = [];
   es.onmessage = e => { try { Q.push(JSON.parse(e.data)); } catch (_) {} };
-  // a warm run takes about a second on the server; play it back at a pace a person can follow
-  (function drain() { if (Q.length) { try { onEv(Q.shift()); } catch (_) {} } setTimeout(drain, Q.length > 300 ? 12 : Q.length > 80 ? 30 : 70); })();
+  // A run takes a few seconds on the server; its ~1000 events replay in about five seconds whatever their number
+  // (more events per frame when the queue is long), so agents are visible without slowing the demo down.
+  (function drain() { const n = Q.length > 600 ? 5 : Q.length > 250 ? 3 : Q.length > 60 ? 2 : 1;
+    for (let i = 0; i < n && Q.length; i++) { try { onEv(Q.shift()); } catch (_) {} } setTimeout(drain, Q.length ? 16 : 60); })();
 }
 function busy(on) {
   $('#go').disabled = on; if (on) { $('#prog').style.width = '0'; $('#p-run').textContent = 'agents working…'; $('#p-run').className = 'pill busy'; controls.autoRotate = !REDUCED; }
@@ -726,7 +766,9 @@ function busy(on) {
 }
 $('#go').onclick = async () => {
   busy(true);
-  try { const r = await (await fetch('/ask/start', { method:'POST', headers:{ 'content-type':'application/json' }, body:'{}' })).json(); LIVE = r.run_id; }
+  try {
+    if ($('#fresh').checked) { const m = await fetch('/memory', { method:'DELETE' }); if (!m.ok) throw new Error('memory reset refused (' + m.status + ')'); feed('in', 'memory cleared: every cause will be tested again'); }
+    const r = await (await fetch('/ask/start', { method:'POST', headers:{ 'content-type':'application/json' }, body:'{}' })).json(); LIVE = r.run_id; }
   catch (e) { busy(false); toast('Could not start a run: ' + e.message); }
 };
 
