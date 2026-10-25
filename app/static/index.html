@@ -149,9 +149,8 @@
   .ev .meta { font:11px "IBM Plex Mono", monospace; color:var(--faint); margin-top:10px; word-break:break-all; }
   .fresh { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
   .fresh input { accent-color:var(--accent); }
-  #speed { position:fixed; left:50%; top:66px; transform:translateX(-50%); z-index:6; font:500 12px "IBM Plex Mono", monospace; color:var(--text);
-           padding:5px 12px; border-radius:20px; background:var(--panel); border:1px solid var(--line); opacity:0; transition:opacity .4s; pointer-events:none; white-space:nowrap; }
-  #speed.on { opacity:1; } #speed b { color:var(--core); font-weight:600; }
+  #speed { margin:0 0 12px; padding:8px 10px; border:1px solid var(--line2); border-radius:8px; background:var(--soft); font:11.5px/1.5 "IBM Plex Mono", monospace; color:var(--muted); }
+  #speed:empty { display:none; } #speed b { color:var(--text); font-weight:600; } #speed .t { font:600 18px Inter, sans-serif; color:var(--core); }
   .pr .vchip { min-width:44px; text-align:center; }
   .ev h6 { margin:12px 0 4px; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.3px; color:var(--muted); text-transform:uppercase; }
 </style>
@@ -182,6 +181,7 @@
     <button class="stat retire" data-f="retire"><b id="c-retire">–</b><span>retire</span></button>
     <button class="stat safe" data-f="safe"><b id="c-safe">–</b><span>safe</span></button>
   </div>
+  <div id="speed"></div>
   <div class="legend">
     <div class="lg"><i style="--c:var(--agent)">◆</i>Agents</div>
     <div class="lg"><i style="--c:var(--core)">⬡</i>Zetaris gateway</div>
@@ -200,7 +200,6 @@
 </div>
 
 <div class="help">drag · scroll · click a crystal</div>
-<div id="speed"></div>
 <div class="hud" id="feed"></div>
 <div class="hud" id="tip"></div>
 <aside id="drawer" aria-hidden="true"></aside>
@@ -694,6 +693,7 @@ async function load(runId) {
   const r = await fetch('/runs/' + runId); if (!r.ok) return;
   RUN = await r.json(); const s = RUN.summary;
   $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill on';
+  if (!LIVE) showSpeed(s, ((RUN.extras || {}).probes || {}).probes || 0);
   for (const [id, n] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[n]; a.href = `/runs/${s.run_id}/extras/${n}`; }
   buildAssets();
 }
@@ -746,8 +746,7 @@ function onEv(ev) {
       if (ev.status === 'done') { busy(false); LIVE = null; corePulse = 1; const s = ev.summary;
         feed('ag', `done in ${s.elapsed_s}s · provenance ${s.provenance_pct}%`);
         // the replay is paced for people; this is what the server actually took
-        $('#speed').innerHTML = `server: <b>${s.signals} assets · ${s.tests_run} tests · ${probes.run} agent probes</b> in <b>${s.elapsed_s} s</b>`;
-        $('#speed').classList.add('on'); setTimeout(() => $('#speed').classList.remove('on'), 9000);
+        showSpeed(s, probes.run);
         load(ev.run_id).then(() => toast(`Run ${ev.run_id} signed in the vault. ${probes.found ? probes.found + ' new findings from the agents. ' : ''}Drafts are waiting for your decision.`)); }
       if (ev.status === 'failed') { busy(false); LIVE = null; toast('Run failed: ' + (ev.error || '')); }
   }
@@ -759,6 +758,10 @@ function listen() {
   // (more events per frame when the queue is long), so agents are visible without slowing the demo down.
   (function drain() { const n = Q.length > 600 ? 5 : Q.length > 250 ? 3 : Q.length > 60 ? 2 : 1;
     for (let i = 0; i < n && Q.length; i++) { try { onEv(Q.shift()); } catch (_) {} } setTimeout(drain, Q.length ? 16 : 60); })();
+}
+// what the server actually took (the animation is a paced replay of it); stays until the next run
+function showSpeed(s, nprobes) {
+  $('#speed').innerHTML = `<span class="t">${s.elapsed_s} s</span> on the server<br><b>${s.signals}</b> assets · <b>${s.tests_run}</b> tests · <b>${nprobes}</b> agent probes`;
 }
 function busy(on) {
   $('#go').disabled = on; if (on) { $('#prog').style.width = '0'; $('#p-run').textContent = 'agents working…'; $('#p-run').className = 'pill busy'; controls.autoRotate = !REDUCED; }
