@@ -106,8 +106,11 @@ def _probe(run, r: dict) -> None:
             probes.append(q)
             continue
         n = res["rows_n"]
-        if re.search(r"(?i)\bother", label) and res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
-            n = sum(1 for row in res["rows"] if row.get("asset_id") != sid)     # "other assets" never counts the asset itself
+        if res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
+            # rows name assets: a cause about OTHER assets never counts this one; a cause about this asset holds only
+            # if this asset is among the rows (a looser query that returns its neighbours does not prove it)
+            other = bool(re.search(r"(?i)\bother", label))
+            n = sum(1 for row in res["rows"] if (row.get("asset_id") != sid) == other)
         verdict = "support" if n else "reject"
         q.update(verdict=verdict, rows=n, sql=sql, sql_executed=res["sql_executed"], sample=res["rows"][:3])
         probes.append(q)
