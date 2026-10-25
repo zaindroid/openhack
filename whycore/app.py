@@ -1,7 +1,7 @@
 """FastAPI surface shared by every idea. Loads app/domain.py (class `DOMAIN`) and serves one page.
 
 GET  /            the app's own page (app/static/index.html) when it ships one, else the report
-GET  /report      UI (report) · GET /live the animated live view
+GET  /ui/{name}   app/static/{name}.html · GET /report  UI (report) · GET /live the animated live view
 GET  /healthz     liveness + backend/model status
 GET  /meta        domain title, question, sources, tables
 POST /ask         {question?, max_signals?} → full run
@@ -176,6 +176,16 @@ def domain_page(name: str) -> str | None:
 @app.get("/", response_class=HTMLResponse)
 def index():
     p = domain_page("index.html") or os.path.join(os.path.dirname(__file__), "static", "index.html")
+    with open(p, encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/ui/{name}", response_class=HTMLResponse)
+def ui_page(name: str):
+    """Further pages an idea ships in app/static (e.g. /ui/grid → app/static/grid.html)."""
+    p = domain_page(name + ".html") if name.replace("-", "").isalnum() else None
+    if not p:
+        raise HTTPException(404, "no such page")
     with open(p, encoding="utf-8") as f:
         return f.read()
 
