@@ -37,11 +37,13 @@ What it cannot show: key fingerprints, key reuse between hosts, who has access, 
 The query must test the cause itself, not something weaker (finding other Ed25519 keys does not show reuse).
 Classically weak means: RSA below 2048 bits, DSA, or ECDSA below 256 bits. Ed25519 and ECDSA-256 are classically fine
 (every RSA/ECC key is quantum-vulnerable anyway, which the fixed hypotheses already cover). Algorithm names are stored
-as RSA, ECDSA, Ed25519, X25519 (match case-insensitively with upper()). When looking for OTHER assets, exclude this one
-with asset_id != '<its asset_id>'.
+as RSA, ECDSA, Ed25519, X25519 (match case-insensitively with upper()).
+Every probe has a scope. "this": the cause is about this asset; the query must select from assets with
+asset_id = '<its asset_id>' and return it only if the cause holds. "others": the cause is about other assets (same
+host, same data class); the query must include asset_id != '<its asset_id>'. The label must say the same thing.
 Do not repeat a cause from earlier_probes; if an earlier probe failed with an error, you may fix that query instead.
 Reply with JSON only:
-{"done": false, "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
+{"done": false, "scope": "this" or "others", "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
 or {"done": true} when nothing new is worth testing.
 Tables (Spark SQL, read-only):
  assets(asset_id, name, host, port, kind, algorithm, key_bits, purpose, negotiated_kex, negotiated_sig, expires, in_use, data_class, traffic_gb_month, source, found_at, note)
@@ -74,7 +76,7 @@ def _probe(run, r: dict) -> None:
     for rnd in range(1, MAX_ROUNDS + 1):
         user = json.dumps({"asset": facts, "fixed_hypotheses": tested,
                            # a failed query goes back with its error, so the next round can repair it
-                           "earlier_probes": [{k: q.get(k) for k in ("cause", "verdict", "rows", "sql", "error") if q.get(k) is not None}
+                           "earlier_probes": [{k: q.get(k) for k in ("scope", "cause", "verdict", "rows", "sql", "error") if q.get(k) is not None}
                                               for q in probes]}, default=str, sort_keys=True)
         run.ledger.step("investigator", "asks the model", signal=sid, round=rnd, probe=True)
         try:
@@ -88,8 +90,21 @@ def _probe(run, r: dict) -> None:
             break
         cause = re.sub(r"[^a-z0-9_]+", "_", str(ask.get("cause") or "probe").lower()).strip("_")[:48] or "probe"
         label = str(ask.get("label") or cause)[:200]
-        q = {"round": rnd, "cause": cause, "label": label, "model": meta.get("model"), "cached": bool(meta.get("cached"))}
+        scope = "others" if str(ask.get("scope", "")).lower().startswith("other") else "this"
+        q = {"round": rnd, "scope": scope, "cause": cause, "label": label, "model": meta.get("model"), "cached": bool(meta.get("cached"))}
         sql = safe_sql(ask["sql"])
+        # the query has to match its scope; a mismatch is not run but sent back, so the next round can repair it
+        lit = re.escape(sid)
+        has_self = re.search(rf"asset_id\s*=\s*'{lit}'", sql or "", re.I)
+        excludes_self = re.search(rf"asset_id\s*(?:!=|<>)\s*'{lit}'", sql or "", re.I)
+        mismatch = sql and ((scope == "this" and (excludes_self or not has_self)) or (scope == "others" and not excludes_self))
+        if mismatch:
+            msg = (f"scope 'this' needs asset_id = '{sid}' and must not exclude it" if scope == "this"
+                   else f"scope 'others' needs asset_id != '{sid}'")
+            q.update(verdict="error", rows=0, sql=sql, error=msg)
+            run.ledger.step("skeptic", "query does not match its scope", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg)
+            probes.append(q)
+            continue
         if not sql:
             q.update(verdict="refused", rows=0, sql=str(ask["sql"])[:400])
             run.ledger.step("skeptic", "refused", signal=sid, hypothesis=cause, label=label, probe=True, reason="not a single read-only SELECT on Mosca's tables")
@@ -107,10 +122,8 @@ def _probe(run, r: dict) -> None:
             continue
         n = res["rows_n"]
         if res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
-            # rows name assets: a cause about OTHER assets never counts this one; a cause about this asset holds only
-            # if this asset is among the rows (a looser query that returns its neighbours does not prove it)
-            other = bool(re.search(r"(?i)\bother", label))
-            n = sum(1 for row in res["rows"] if (row.get("asset_id") != sid) == other)
+            # rows name assets: scope "others" never counts this asset; scope "this" holds only if this asset is in the rows
+            n = sum(1 for row in res["rows"] if (row.get("asset_id") != sid) == (scope == "others"))
         verdict = "support" if n else "reject"
         q.update(verdict=verdict, rows=n, sql=sql, sql_executed=res["sql_executed"], sample=res["rows"][:3])
         probes.append(q)
