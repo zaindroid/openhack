@@ -64,6 +64,7 @@ class Memory:
         self.dir = path or settings.memory_dir
         self.runs = os.path.join(self.dir, "runs.jsonl")
         self.rejections = os.path.join(self.dir, "rejections.json")
+        self.decisions = os.path.join(self.dir, "decisions.json")   # human approvals/rejections, by action id
         self.hmem = HMemMirror(settings.meterless_engines_url)
         self.lock = threading.Lock()         # remember() runs from the pipeline's test workers
 
@@ -106,6 +107,29 @@ class Memory:
             json.dump(store, f, indent=1)
         os.replace(tmp, self.rejections)
 
+    def record_decision(self, action_id: str, label: str, status: str, run_id: str, applied: dict | None = None) -> None:
+        """A human decision outlives the run it was made in: the next run's identical draft (same id and label) comes
+        back already decided instead of asking again. A changed label means changed evidence, so it is asked again."""
+        with self.lock:
+            self._ensure()
+            store = self._decisions()
+            store[action_id] = {"label": label, "status": status, "run_id": run_id, "t": time.time(), "applied": applied}
+            tmp = self.decisions + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(store, f, indent=1)
+            os.replace(tmp, self.decisions)
+
+    def decision(self, action_id: str, label: str) -> dict | None:
+        with self.lock:
+            d = self._decisions().get(action_id)
+        return d if d and d.get("label") == label else None
+
+    def _decisions(self) -> dict:
+        if not os.path.exists(self.decisions):
+            return {}
+        with open(self.decisions) as f:
+            return json.load(f)
+
     def log_run(self, record: dict) -> None:
         self._ensure()
         with open(self.runs, "a") as f:
@@ -120,9 +144,12 @@ class Memory:
         if os.path.exists(self.rejections):
             with open(self.rejections) as f:
                 rej = sum(len(v) for v in json.load(f).values())
-        return {"runs": n, "remembered_rejections": rej, "dir": self.dir, "hmem": self.hmem.stats()}
+        with self.lock:
+            dec = len(self._decisions())
+        return {"runs": n, "remembered_rejections": rej, "decisions": dec, "dir": self.dir, "hmem": self.hmem.stats()}
 
     def reset(self) -> None:
+        # learned memory only; human decisions (decisions.json) are records of what a person approved and are kept
         for p in (self.runs, self.rejections):
             if os.path.exists(p):
                 os.remove(p)
