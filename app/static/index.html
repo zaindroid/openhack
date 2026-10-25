@@ -234,7 +234,7 @@ const THEMES = {
                     drawer:'#181b21', tagbg:'rgba(22,25,31,.9)', tagline:'#323844', tagtext:'#c3c9d4', shadow:'rgba(0,0,0,.35)', accent:'#4f7cf7', tglow:'0px', edgeglow:'10%', edgeglow2:'40%' } },
   daylight: { name:'Daylight', dark:false, bloom:[.18, .3, .92], amb:1.6, key:1.6, fog:.006, edge:.9, glow:.85,
               c:{ bg:0xeef2f7, grid1:0xc6cfdc, grid2:0xdce2ea, solid:0xdbe2ec, infra:0x2f5fd0, core:0x0e8fb0, agent:0x6d4ad8, ring:0xb3bfd0, screen:0xbfe3d4 },
-              st:{ late:0xd1343a, risk:0xc27d0e, retire:0x8a93a3, safe:0x1f9466 },
+              st:{ late:0xe0464c, risk:0xf0a020, retire:0x8a93a3, safe:0x22a06f },
               css:{ bg:'#eef2f7', panel:'rgba(255,255,255,.88)', line:'#d5dce6', line2:'#e6eaf0', text:'#141821', muted:'#5f6878', faint:'#8a93a3', soft:'rgba(15,23,42,.03)',
                     drawer:'#ffffff', tagbg:'rgba(255,255,255,.92)', tagline:'#cfd7e3', tagtext:'#3a4456', shadow:'rgba(16,24,40,.10)', accent:'#2f5fd0', tglow:'0px', edgeglow:'30%', edgeglow2:'70%' } },
 };
@@ -424,8 +424,8 @@ function buildAssets() {
     xs.forEach((x, j) => {
       const a = start + j * step, pos = new THREE.Vector3(Math.cos(a) * r, 1.1, Math.sin(a) * r);
       const c = COL[x.st];
-      const body = T.dark ? new THREE.Color(c).multiplyScalar(.3) : new THREE.Color(c).lerp(new THREE.Color(0xffffff), .25);
-      const mesh = new THREE.Mesh(GEO[kind], new THREE.MeshStandardMaterial({ color:body, emissive:c, emissiveIntensity:(T.dark ? { late:.55, risk:.4, retire:.05, safe:.16 } : { late:.12, risk:.08, retire:0, safe:.03 })[x.st], flatShading:true, transparent:true, opacity:1, metalness:.15, roughness:.5 }));
+      const body = T.dark ? new THREE.Color(c).multiplyScalar(.3) : new THREE.Color(c);
+      const mesh = new THREE.Mesh(GEO[kind], new THREE.MeshStandardMaterial({ color:body, emissive:c, emissiveIntensity:(T.dark ? { late:.55, risk:.4, retire:.05, safe:.16 } : { late:.35, risk:.32, retire:0, safe:.08 })[x.st], flatShading:true, transparent:true, opacity:1, metalness:.15, roughness:.5 }));
       mesh.position.copy(pos); mesh.userData.id = x.p.asset_id; mesh.rotation.y = a;
       // the outline carries the glow (bloom picks it up), so the crystal reads as a lit edge rather than a lamp
       const outline = new THREE.LineSegments(new THREE.EdgesGeometry(GEO[kind], 25), new THREE.LineBasicMaterial({ color:c, transparent:true, opacity:x.st === 'retire' ? .45 * T.edge : T.edge }));
