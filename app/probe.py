@@ -21,18 +21,23 @@ from whycore.memory import memory
 from whycore.model import model
 
 MAX_ROUNDS = int(os.environ.get("PROBE_ROUNDS", "3"))
-WORKERS = int(os.environ.get("PROBE_WORKERS", "4"))
+WORKERS = int(os.environ.get("PROBE_WORKERS", "8"))
 TABLES = {"assets", "probes", "data_classes", "migration_paths", "scenarios"}
 FORBIDDEN = re.compile(r"(?i)\b(insert|update|delete|drop|alter|create|grant|revoke|truncate|copy|call|exec|execute|merge|"
                        r"attach|detach|pragma|set|into|load|install|refresh|cache|uncache|msck|dblink|information_schema|pg_\w+)\b")
 SYSTEM = """You are the Investigator in a post-quantum cryptography audit of the owner's own estate.
 An asset was tested against four fixed hypotheses (harvest_now_decrypt_later, forgery_after_qday, already_hybrid,
-dead_asset). Propose ONE further rival cause that could change what the owner should do about this asset, which a
-query over the tables below can confirm or rule out, and which the earlier probes have not covered. Examples of the
-kind of cause: the same key or certificate reused on other hosts, a weak algorithm elsewhere on the same host, a
-certificate expiring before the migration could finish, other assets in the same data class that are late.
+dead_asset). Propose ONE further cause that could change what the owner should do about this asset and that the
+columns below can actually show. Then write one query that returns rows ONLY if that cause holds for this asset.
+What the data can show: other assets on the same host (host) with weak algorithms or small keys (algorithm, key_bits);
+an expiry date (expires) falling before the migration could finish (migration_paths.migration_years); the asset
+having no expiry at all (expires IS NULL) while in use; other assets of the same data_class that share its kind and
+algorithm; failed or missing handshakes for its host in probes (target LIKE '%host%', outcome).
+What it cannot show: key fingerprints, key reuse between hosts, who has access, patch levels. Do not propose those.
+The query must test the cause itself, not something weaker (finding other Ed25519 keys does not show reuse).
+Do not repeat a cause from earlier_probes; if an earlier probe failed with an error, you may fix that query instead.
 Reply with JSON only:
-{"done": false, "cause": "snake_case_name", "label": "one sentence", "sql": "one SELECT that returns rows ONLY if the cause holds for this asset", "action": "what to do if it holds, imperative, under 90 characters"}
+{"done": false, "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
 or {"done": true} when nothing new is worth testing.
 Tables (Spark SQL, read-only):
  assets(asset_id, name, host, port, kind, algorithm, key_bits, purpose, negotiated_kex, negotiated_sig, expires, in_use, data_class, traffic_gb_month, source, found_at, note)
@@ -40,6 +45,8 @@ Tables (Spark SQL, read-only):
  data_classes(data_class, shelf_life_years, examples)
  migration_paths(kind, migration_years, vendor_ready, note)
  scenarios(scenario, z_year, note)
+Spark SQL notes: expires is a 'YYYY-MM-DD' string, compare with to_date(expires); add days with
+date_add(current_date(), n); key_bits is a string, compare with CAST(key_bits AS INT); in_use = true.
 Use only these tables and columns. Compare text with single quotes. No comments, no semicolons, at most 50 rows."""
 
 
@@ -62,7 +69,9 @@ def _probe(run, r: dict) -> None:
     probes: list[dict] = []
     for rnd in range(1, MAX_ROUNDS + 1):
         user = json.dumps({"asset": facts, "fixed_hypotheses": tested,
-                           "earlier_probes": [{k: q.get(k) for k in ("cause", "verdict", "rows")} for q in probes]}, default=str, sort_keys=True)
+                           # a failed query goes back with its error, so the next round can repair it
+                           "earlier_probes": [{k: q.get(k) for k in ("cause", "verdict", "rows", "sql", "error") if q.get(k) is not None}
+                                              for q in probes]}, default=str, sort_keys=True)
         run.ledger.step("investigator", "asks the model", signal=sid, round=rnd, probe=True)
         try:
             text, meta = model.answer(SYSTEM, user, deep=False, json_mode=True, max_tokens=320)
@@ -85,8 +94,11 @@ def _probe(run, r: dict) -> None:
         try:
             res = data.run_sql(sql)
         except Exception as e:
-            q.update(verdict="error", rows=0, sql=sql, error=str(e)[:200])
-            run.ledger.step("skeptic", "query failed", signal=sid, hypothesis=cause, label=label, probe=True, reason=str(e)[:120])
+            # keep the part of Zetaris' answer that says what is wrong ("[UNRESOLVED_COLUMN...] ... `key_id` ...")
+            m = re.search(r"\[[A-Z_.]+\][^\\\"]{0,160}|ParseException[^\\\"]{0,120}", str(e))
+            msg = re.sub(r"\s+", " ", m.group(0) if m else str(e)[:200])[:200]
+            q.update(verdict="error", rows=0, sql=sql, error=msg)
+            run.ledger.step("skeptic", "query failed", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg[:120])
             probes.append(q)
             continue
         n = res["rows_n"]
