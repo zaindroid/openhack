@@ -35,7 +35,7 @@
   .ghost:hover { border-color:var(--accent); }
 
   /* left: status + legend */
-  #left { left:16px; top:86px; width:250px; padding:12px; max-height:calc(100vh - 110px); overflow:auto; }
+  #left { left:16px; top:86px; width:250px; padding:12px; max-height:calc(100vh - 110px); overflow-y:auto; overflow-x:hidden; }
   .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 14px; }
   .stat { text-align:left; background:rgba(255,255,255,.02); border:1px solid var(--line2); border-radius:8px; padding:8px 10px; cursor:pointer; }
   .stat b { display:block; font:600 22px "IBM Plex Mono", monospace; color:var(--c); text-shadow:0 0 14px color-mix(in srgb, var(--c) 45%, transparent); }
@@ -52,7 +52,7 @@
   #right { right:16px; top:86px; width:330px; max-height:calc(100vh - 110px); display:flex; flex-direction:column; }
   #right .hd { padding:12px 14px 8px; display:flex; align-items:center; gap:8px; }
   #right .hd b { font:600 13px "IBM Plex Mono", monospace; color:var(--risk); }
-  #queue { overflow:auto; padding:0 10px 10px; display:grid; gap:8px; }
+  #queue { overflow-y:auto; overflow-x:hidden; padding:0 10px 10px; display:grid; gap:8px; }
   .card { border:1px solid var(--line2); border-left:2px solid var(--c); border-radius:8px; padding:9px 10px; background:rgba(255,255,255,.025); transition:border-color .2s, transform .2s, opacity .3s; }
   .card:hover, .card.hl { border-color:var(--c); transform:translateX(-2px); }
   .card .t { display:flex; gap:8px; align-items:center; }
@@ -251,9 +251,9 @@ pillar('src-s3', 'OBJECT STORE · POSTGRES', -Math.PI / 2 + .8, 42, 5);
 pillar('human', 'YOU · APPROVE', Math.PI / 2, 40, 4);
 // model + memory float above the core
 const model = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 2), new THREE.MeshBasicMaterial({ color:COL.infra, wireframe:true, transparent:true, opacity:.5 }));
-model.position.set(0, 17, -6); scene.add(model);
+model.position.set(0, 19, 0); scene.add(model);
 INFRA.model = { top:model.position.clone() };
-const modelLbl = label('NEMOTRON · MODEL', 'infra', new THREE.Vector3(0, 20.2, -6));
+label('NEMOTRON · MODEL', 'infra', new THREE.Vector3(0, 22.2, 0));
 const memory = new THREE.Mesh(new THREE.TorusGeometry(5.6, .12, 10, 140), new THREE.MeshStandardMaterial({ color:0x0b1a33, emissive:COL.infra, emissiveIntensity:.9 }));
 memory.position.set(0, 9.5, 0); memory.rotation.x = Math.PI / 2; scene.add(memory);
 INFRA.memory = { top:new THREE.Vector3(5.6, 9.5, 0) };
@@ -317,10 +317,12 @@ function buildAssets() {
       const o = { mesh, st:x.st, res:x.res, p:x.p, pos, base:mesh.material.emissiveIntensity, phase:Math.random() * 6.28, flash:0 };
       const act = x.st !== 'safe' ? nextAction(x.res) : null;
       if (act) {
-        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, 9, 6, 1, true), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.55, blending:THREE.AdditiveBlending, depthWrite:false }));
-        beacon.position.set(pos.x, pos.y + 4.8, pos.z); assetGroup.add(beacon); o.beacon = beacon;
-        o.tag = label(`<span class="${x.st}">${ST[x.st]}</span>`, 'att ' + x.st, new THREE.Vector3(pos.x, pos.y + 9.6, pos.z), { asset:x.p.asset_id });
-        o.tag.el.onclick = () => focusAsset(x.p.asset_id, true);
+        // late / at-risk assets get a tall beacon and a tag; retire is a short, dim marker so it does not drown them out
+        const tall = x.st !== 'retire', h = tall ? 9 : 2.6;
+        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, h, 6, 1, true), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.55, blending:THREE.AdditiveBlending, depthWrite:false }));
+        beacon.position.set(pos.x, pos.y + h / 2 + .3, pos.z); assetGroup.add(beacon); o.beacon = beacon; o.dim = !tall;
+        if (tall) { o.tag = label(`<span class="${x.st}">${ST[x.st]}</span>`, 'att ' + x.st, new THREE.Vector3(pos.x, pos.y + 9.6, pos.z), { asset:x.p.asset_id });
+          o.tag.el.onclick = () => focusAsset(x.p.asset_id, true); }
       }
       ASSET[x.p.asset_id] = o;
     });
@@ -436,7 +438,7 @@ function frame(now) {
     const pulse = o.st === 'late' ? (Math.sin(t * 5) + 1) * .5 : o.st === 'risk' ? (Math.sin(t * 2.6) + 1) * .35 : 0;
     m.material.emissiveIntensity = o.base + pulse * .6 + o.flash * 2.2 + (HOVER === id ? 1.2 : 0);
     m.scale.setScalar(1 + o.flash * .35 + (HOVER === id ? .25 : 0));
-    if (o.beacon) o.beacon.material.opacity = .25 + (Math.sin(t * 3 + o.phase) + 1) * .2 + (HOVER === id ? .4 : 0);
+    if (o.beacon) o.beacon.material.opacity = (o.dim ? .12 : .25 + (Math.sin(t * 3 + o.phase) + 1) * .2) + (HOVER === id ? .45 : 0);
   }
   for (let i = SHOTS.length - 1; i >= 0; i--) { const s = SHOTS[i], u = (now - s.t0) / s.dur;
     if (u >= 1.4) { scene.remove(s.m, s.line); s.m.material.dispose(); s.line.geometry.dispose(); s.line.material.dispose(); SHOTS.splice(i, 1); continue; }
