@@ -133,8 +133,16 @@ class Run:
         step("planner", f"{len(actions)} draft actions", signal=s.id, first=(actions[0].label[:120] if actions else ""))
         for a in actions:
             claims.append(Claim(text=a.label, kind="action", sql=None, status="unverified", data={"priority": a.priority, "rationale": a.rationale}))
+        acts = [asdict(a) for a in actions]
+        for a in acts:     # a draft a human already decided (same id, same label) carries that decision; nothing is re-applied
+            d = memory.decision(a["id"], a["label"])
+            if d:
+                a.update(status=d["status"], decided_in=d["run_id"], decided_at=d["t"])
+                if d.get("applied"):
+                    a["applied"] = d["applied"]
+                step("human", f"{d['status']} earlier", signal=s.id, action=a["id"], run=d["run_id"])
         result = {"signal": asdict(s), "hypotheses": [asdict(h) for h in hyps], "verdicts": [asdict(v) for v in verdicts],
-                  "supported": [v.hypothesis_id for v in verdicts if v.verdict == "support"], "actions": [asdict(a) for a in actions],
+                  "supported": [v.hypothesis_id for v in verdicts if v.verdict == "support"], "actions": acts,
                   "explanation": ""}
         return {"claims": claims, "steps": steps, "failures": failures, "tests_run": tests_run, "skipped": skipped,
                 "prompt": D.explain_prompt(s, verdicts, actions), "result": result}
@@ -199,6 +207,7 @@ class Run:
                         return a                  # decided already; a second click does not re-apply
                     a["status"] = "approved" if approve else "rejected"
                     self.ledger.step("human", a["status"], action=action_id)
+                    memory.record_decision(action_id, a["label"], a["status"], self.id)
                     hook = getattr(self.domain, "on_approve", None)
                     if approve and hook:
                         try:
@@ -206,6 +215,7 @@ class Run:
                         except Exception as e:
                             res = {"applied": False, "message": f"apply failed: {str(e)[:200]}"}
                         a["applied"] = res
+                        memory.record_decision(action_id, a["label"], a["status"], self.id, res)
                         self.ledger.step("apply", "applied" if res.get("applied") else "not applied", action=action_id,
                                          message=res.get("message", ""))
                         if res.get("applied"):
