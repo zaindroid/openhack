@@ -42,6 +42,10 @@ Every probe has a scope. "this": the cause is about this asset; the query must s
 asset_id = '<its asset_id>' and return it only if the cause holds. "others": the cause is about other assets (same
 host, same data class); the query must include asset_id != '<its asset_id>'. The label must say the same thing.
 Do not repeat a cause from earlier_probes; if an earlier probe failed with an error, you may fix that query instead.
+Work through these in order and take the first one earlier_probes do not cover yet: (1) this asset: no expiry while
+in use, or an expiry before its migration could finish; (2) others on the same host: classically weak keys or failed
+handshakes in probes; (3) others in the same data_class and kind: still on the same algorithm. Answer done only
+when all three are covered.
 Reply with JSON only:
 {"done": false, "scope": "this" or "others", "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
 or {"done": true} when nothing new is worth testing.
