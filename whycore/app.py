@@ -1,6 +1,7 @@
 """FastAPI surface shared by every idea. Loads app/domain.py (class `DOMAIN`) and serves one page.
 
-GET  /            UI (report) · GET /live the animated live view
+GET  /            the app's own page (app/static/index.html) when it ships one, else the report
+GET  /report      UI (report) · GET /live the animated live view
 GET  /healthz     liveness + backend/model status
 GET  /meta        domain title, question, sources, tables
 POST /ask         {question?, max_signals?} → full run
@@ -165,8 +166,21 @@ def memory_reset():
     return memory.stats()
 
 
+def domain_page(name: str) -> str | None:
+    """app/static/<name> next to the domain module, if the idea ships its own page."""
+    mod = importlib.import_module(type(DOMAIN).__module__)
+    p = os.path.join(os.path.dirname(mod.__file__), "static", name)
+    return p if os.path.exists(p) else None
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    here = os.path.dirname(__file__)
-    with open(os.path.join(here, "static", "index.html")) as f:
+    p = domain_page("index.html") or os.path.join(os.path.dirname(__file__), "static", "index.html")
+    with open(p, encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/report", response_class=HTMLResponse)
+def report():
+    with open(os.path.join(os.path.dirname(__file__), "static", "index.html"), encoding="utf-8") as f:
         return f.read()
