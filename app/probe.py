@@ -35,6 +35,10 @@ having no expiry at all (expires IS NULL) while in use; other assets of the same
 algorithm; failed or missing handshakes for its host in probes (target LIKE '%host%', outcome).
 What it cannot show: key fingerprints, key reuse between hosts, who has access, patch levels. Do not propose those.
 The query must test the cause itself, not something weaker (finding other Ed25519 keys does not show reuse).
+Classically weak means: RSA below 2048 bits, DSA, or ECDSA below 256 bits. Ed25519 and ECDSA-256 are classically fine
+(every RSA/ECC key is quantum-vulnerable anyway, which the fixed hypotheses already cover). Algorithm names are stored
+as RSA, ECDSA, Ed25519, X25519 (match case-insensitively with upper()). When looking for OTHER assets, exclude this one
+with asset_id != '<its asset_id>'.
 Do not repeat a cause from earlier_probes; if an earlier probe failed with an error, you may fix that query instead.
 Reply with JSON only:
 {"done": false, "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
@@ -102,6 +106,8 @@ def _probe(run, r: dict) -> None:
             probes.append(q)
             continue
         n = res["rows_n"]
+        if re.search(r"(?i)\bother", label) and res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
+            n = sum(1 for row in res["rows"] if row.get("asset_id") != sid)     # "other assets" never counts the asset itself
         verdict = "support" if n else "reject"
         q.update(verdict=verdict, rows=n, sql=sql, sql_executed=res["sql_executed"], sample=res["rows"][:3])
         probes.append(q)
