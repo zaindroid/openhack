@@ -28,8 +28,9 @@ FORBIDDEN = re.compile(r"(?i)\b(insert|update|delete|drop|alter|create|grant|rev
                        r"attach|detach|pragma|set|into|load|install|refresh|cache|uncache|msck|dblink|information_schema|pg_\w+)\b")
 SYSTEM = """You are the Investigator in a post-quantum cryptography audit of the owner's own estate.
 An asset was tested against four fixed hypotheses (harvest_now_decrypt_later, forgery_after_qday, already_hybrid,
-dead_asset). You get one focus: a further check that could change what the owner should do about this asset. Decide
-whether it applies to this asset; if it does, write one query that returns rows ONLY if it holds, within the given scope.
+dead_asset). You get one focus: a further check that could change what the owner should do about this asset. Write
+one query that returns rows ONLY if the focus holds for this asset, within the given scope. Always write the query:
+if the focus does not hold, the query returns no rows, and that is a valid answer.
 What the data can show: other assets on the same host (host) with weak algorithms or small keys (algorithm, key_bits);
 an expiry date (expires) falling before the migration could finish (migration_paths.migration_years); the asset
 having no expiry at all (expires IS NULL) while in use; other assets of the same data_class that share its kind and
@@ -43,8 +44,8 @@ Scope "this": select from assets with asset_id = '<its asset_id>' and return it 
 Scope "others": include asset_id != '<its asset_id>'. The label must describe exactly what the rows mean.
 If earlier_probes holds a failed query for this focus, fix it using its error.
 Reply with JSON only:
-{"done": false, "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
-or {"done": true} when the focus does not apply to this asset.
+{"cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
+(no other keys, no prose).
 Tables (Spark SQL, read-only):
  assets(asset_id, name, host, port, kind, algorithm, key_bits, purpose, negotiated_kex, negotiated_sig, expires, in_use, data_class, traffic_gb_month, source, found_at, note)
  probes(source, target, outcome, probed_at)
@@ -89,8 +90,8 @@ def _round(run, r: dict, facts: dict, tested: dict, probes: list, rnd: int, scop
     except Exception as e:
         run.ledger.step("investigator", "no usable answer", signal=sid, round=rnd, probe=True, error=str(e)[:120])
         return "stop"
-    if ask.get("done") or not ask.get("sql"):
-        run.ledger.step("investigator", "not applicable here", signal=sid, round=rnd, probe=True, focus=focus)
+    if not ask.get("sql"):                       # a query is required; "done" or prose without one ends this focus
+        run.ledger.step("investigator", "no query written", signal=sid, round=rnd, probe=True, focus=focus)
         return "done"
     cause = re.sub(r"[^a-z0-9_]+", "_", str(ask.get("cause") or "probe").lower()).strip("_")[:48] or "probe"
     label = str(ask.get("label") or cause)[:200]
