@@ -98,6 +98,7 @@
   .v { padding:7px 0; border-top:1px solid var(--line2); } .v:first-of-type { border-top:0; }
   .v .t { display:flex; gap:8px; align-items:center; font-size:12.5px; font-weight:500; } .v .r { font-size:12px; color:var(--muted); margin-top:2px; }
   .vchip { font:600 9.5px "IBM Plex Mono", monospace; padding:1px 6px; border-radius:3px; text-transform:uppercase; flex:none; }
+  .vchip.retire { color:var(--retire); border:1px solid var(--retire); }
   .vchip.support { color:var(--late); border:1px solid var(--late); } .vchip.reject { color:var(--safe); border:1px solid var(--safe); } .vchip.uncertain { color:var(--risk); border:1px solid var(--risk); }
   summary { cursor:pointer; font-size:11.5px; color:var(--accent); }
   pre { font:11px/1.5 "IBM Plex Mono", monospace; background:rgba(255,255,255,.03); border:1px solid var(--line2); border-radius:6px; padding:8px; white-space:pre-wrap; word-break:break-word; margin:6px 0 0; color:var(--muted); }
@@ -526,6 +527,11 @@ requestAnimationFrame(frame);
 
 // ---------- drawer ----------
 const HYP = { harvest_now_decrypt_later:'Harvest now, decrypt later', forgery_after_qday:'Forgery after Q-day', already_hybrid:'Already post-quantum', dead_asset:'Not in use' };
+const ANS = { support:'yes', reject:'no', uncertain:'unclear' };
+// colour by what the answer means for the asset: a confirmed quantum risk is bad, a confirmed "already post-quantum" is good
+const RISK = new Set(['harvest_now_decrypt_later', 'forgery_after_qday']);
+const tone = t => t.verdict === 'uncertain' ? 'uncertain' : RISK.has(t.hypothesis_id) ? (t.verdict === 'support' ? 'support' : 'reject')
+                : t.hypothesis_id === 'already_hybrid' && t.verdict === 'support' ? 'reject' : 'retire';
 function say(p, st) {   // the status in one plain sentence, from the same numbers the verdicts used
   const x = +p.x || 0, y = +p.y || 0;
   if (st === 'retire') return 'Not in use. Retire it instead of migrating.';
@@ -554,7 +560,7 @@ function openDrawer(id) {
     <section>${rec ? `<div class="rec"><span class="k">Recommended</span><div class="l">${esc(rec.label)}</div>${btns(rec)}</div>` : drafts.length ? '' : '<span class="s">No action needed.</span>'}
       ${rest.length ? `<details class="more"><summary>${rest.length} more action${rest.length > 1 ? 's' : ''}</summary>${rest.map(a => `<div class="ax"><div class="l">${esc(a.label)}</div>${btns(a)}</div>`).join('')}</details>` : ''}</section>
     <details class="ev"><summary>Evidence</summary>
-      ${res.verdicts.map(t => `<details class="v"><summary><span class="vchip ${esc(t.verdict)}">${esc(t.verdict)}</span>${esc(HYP[t.hypothesis_id] || t.hypothesis_id)}</summary>
+      ${res.verdicts.map(t => `<details class="v"><summary><span class="vchip ${tone(t)}">${ANS[t.verdict] || esc(t.verdict)}</span>${esc(HYP[t.hypothesis_id] || t.hypothesis_id)}</summary>
         <div class="r">${esc(t.reason)}</div>${t.sql_executed || t.sql ? `<pre>${esc(t.sql_executed || t.sql)}</pre>` : ''}</details>`).join('')}
       ${res.explanation ? `<div class="r" style="margin-top:10px">${esc(res.explanation.split(/(?<=\.)\s/).slice(0, 2).join(' '))}</div>` : ''}
       <div class="meta">${esc([p.data_class, [p.host, p.port].filter(v => v != null && v !== '').join(':'), p.source].filter(Boolean).join(' · '))}</div>
