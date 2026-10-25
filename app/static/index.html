@@ -153,6 +153,42 @@
   #speed:empty { display:none; } #speed b { color:var(--text); font-weight:600; } #speed .t { font:600 18px Inter, sans-serif; color:var(--core); }
   .pr .vchip { min-width:44px; text-align:center; }
   .ev h6 { margin:12px 0 4px; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.3px; color:var(--muted); text-transform:uppercase; }
+  .menu, .chev { display:none; }
+  /* tablet and phone: counts become a strip under the header; legend, feed and hints go */
+  @media (max-width:1100px) {
+    #left { display:block; left:12px; right:12px; top:64px; width:auto; max-height:none; padding:6px; }
+    #left .legend, #left .rule, .help { display:none; }
+    #left .stats { grid-template-columns:repeat(4, 1fr); gap:6px; margin:0; }
+    #left .stat { padding:5px 8px; } #left .stat b { font-size:17px; } #left .stat span { font-size:10px; }
+    #speed { display:none; }
+  }
+  /* phone */
+  @media (max-width:760px) {
+    header { left:8px; right:8px; top:8px; padding:8px 10px; gap:8px; }
+    header .opt { display:none; }
+    header.open .opt:not([hidden]) { display:inline-flex; }
+    header.open { flex-wrap:wrap; }
+    .menu { display:inline-block; padding:5px 10px; font-size:15px; line-height:1; }
+    #go { padding:7px 11px; }
+    #left { left:8px; right:8px; top:58px; }
+    header.open ~ #left { display:none; }
+    /* the decision queue is a bottom sheet: a handle when closed, most of the screen when open */
+    #right { left:0; right:0; bottom:0; top:auto; width:auto; max-height:52px; border-radius:14px 14px 0 0; transition:max-height .25s ease; }
+    #right.open { max-height:62vh; }
+    #right .hd { cursor:pointer; padding:14px 16px; }
+    #right .hd::before { content:""; position:absolute; left:50%; top:6px; width:36px; height:4px; border-radius:2px; background:var(--line); transform:translateX(-50%); }
+    .chev { display:inline; margin-left:auto; color:var(--muted); transition:transform .2s; } #right.open .chev { transform:rotate(180deg); }
+    #queue { padding:0 10px 18px; }
+    .card .row button { padding:7px 14px; font-size:12.5px; }
+    #feed, .help { display:none; }
+    .tag { font-size:8.5px; letter-spacing:.8px; } .tag.lane, .tag.infra small { display:none; }
+    .tag.infra, .tag.agent { padding:1px 5px; }
+    aside { width:100vw; }
+    aside .dh { padding-top:max(14px, env(safe-area-inset-top)); }
+    .toasts { bottom:70px; left:12px; right:12px; transform:none; }
+    .toast { max-width:none; }
+    #tip { display:none !important; }
+  }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
@@ -164,13 +200,14 @@
 <header class="hud">
   <h1>Mosca <span style="color:var(--muted);font-weight:500">vault</span></h1>
   <span style="flex:1"></span>
-  <div class="themes" id="themes" role="group" aria-label="Theme"></div>
-  <span class="pill" id="p-sys">connecting</span>
-  <span class="pill" id="p-run">no run</span>
-  <a class="ghost" href="/live">Pipeline</a>
-  <a class="ghost" id="dl-att" href="#" hidden>Attestation</a>
-  <a class="ghost" id="dl-cbom" href="#" hidden>CBOM</a>
-  <label class="fresh" title="Forget what earlier runs ruled out, so every cause is tested again (your approvals are kept)"><input type="checkbox" id="fresh"> fresh memory</label>
+  <div class="themes opt" id="themes" role="group" aria-label="Theme"></div>
+  <span class="pill opt" id="p-sys">connecting</span>
+  <span class="pill opt" id="p-run">no run</span>
+  <a class="ghost opt" href="/live">Pipeline</a>
+  <a class="ghost opt" id="dl-att" href="#" hidden>Attestation</a>
+  <a class="ghost opt" id="dl-cbom" href="#" hidden>CBOM</a>
+  <label class="fresh opt" title="Forget what earlier runs ruled out, so every cause is tested again (your approvals are kept)"><input type="checkbox" id="fresh"> fresh memory</label>
+  <button class="ghost menu" id="menu" aria-label="More options" aria-expanded="false">☰</button>
   <button class="btn" id="go">Run analysis</button>
 </header>
 
@@ -195,7 +232,7 @@
 </div>
 
 <div class="hud" id="right">
-  <div class="hd"><span class="k">Decisions</span><b id="nq">0</b></div>
+  <div class="hd" id="qhd" role="button" tabindex="0" aria-expanded="false"><span class="k">Decisions</span><b id="nq">0</b><span class="chev" aria-hidden="true">▴</span></div>
   <div id="queue"></div>
 </div>
 
@@ -255,12 +292,14 @@ const reg = (m, role, kind = 'color') => { REG.push([m, role, m.opacity, kind]);
 const canvas = $('#gl');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias:true }); } catch (e) { $('#nogl').style.display = 'grid'; throw e; }
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const SMALL = () => innerWidth < 760;
+renderer.setPixelRatio(Math.min(devicePixelRatio, SMALL() ? 1.5 : 2));   // phones: fewer pixels, smoother frames
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0f17);
 scene.fog = new THREE.FogExp2(0x0b0f17, 0.009);   // set by applyTheme
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
 camera.position.set(0, 30, 46);
+if (SMALL()) camera.position.set(0, 52, 74);   // a portrait screen needs the whole ring in view
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = .06; controls.maxPolarAngle = Math.PI * .47; controls.minDistance = 8; controls.maxDistance = 110;
 controls.autoRotate = !REDUCED; controls.autoRotateSpeed = .35;
@@ -485,6 +524,7 @@ document.querySelectorAll('.stat').forEach(b => b.onclick = () => { FILTER = FIL
 let fly = null;
 function focusAsset(id, open) {
   const o = ASSET[id]; if (!o) return;
+  if (SMALL()) $('#right').classList.remove('open');
   controls.autoRotate = false;
   const dir = o.pos.clone().setY(0).normalize();
   fly = { t0:performance.now(), dur:900, fromT:controls.target.clone(), toT:o.pos.clone(), fromC:camera.position.clone(),
@@ -509,7 +549,8 @@ canvas.addEventListener('pointermove', e => {
   } else { tip.style.display = 'none'; canvas.style.cursor = ''; if (HOVER && !document.querySelector('.card:hover')) HOVER = null; }
 });
 canvas.addEventListener('pointerup', e => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 8) return;
+  mouse.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);   // a tap has no hover before it
   ray.setFromCamera(mouse, camera);
   const hit = ray.intersectObjects(assetGroup.children.filter(m => m.userData.id))[0];
   if (hit) focusAsset(hit.object.userData.id, true);
@@ -539,7 +580,8 @@ function sendAgent(id, assetId, ms = 900, force = false) {
 }
 
 // ---------- render loop ----------
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); bloom.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); bloom.setSize(SMALL() ? w / 2 : w, SMALL() ? h / 2 : h);
+  camera.aspect = w / h; camera.fov = w / h < 1 ? 62 : 48; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 const v = new THREE.Vector3();
 function frame(now) {
@@ -692,7 +734,7 @@ async function load(runId) {
   if (!runId) { $('#p-run').textContent = 'no run yet · press Run analysis'; return; }
   const r = await fetch('/runs/' + runId); if (!r.ok) return;
   RUN = await r.json(); const s = RUN.summary;
-  $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill on';
+  $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill opt on';
   if (!LIVE) showSpeed(s, ((RUN.extras || {}).probes || {}).probes || 0);
   for (const [id, n] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[n]; a.href = `/runs/${s.run_id}/extras/${n}`; }
   buildAssets();
@@ -764,9 +806,13 @@ function showSpeed(s, nprobes) {
   $('#speed').innerHTML = `<span class="t">${s.elapsed_s} s</span> on the server<br><b>${s.signals}</b> assets · <b>${s.tests_run}</b> tests · <b>${nprobes}</b> agent probes`;
 }
 function busy(on) {
-  $('#go').disabled = on; if (on) { $('#prog').style.width = '0'; $('#p-run').textContent = 'agents working…'; $('#p-run').className = 'pill busy'; controls.autoRotate = !REDUCED; }
+  $('#go').disabled = on; if (on) { $('#prog').style.width = '0'; $('#p-run').textContent = 'agents working…'; $('#p-run').className = 'pill opt busy'; controls.autoRotate = !REDUCED; }
   else setTimeout(() => $('#prog').style.width = '0', 800);
 }
+$('#menu').onclick = () => { const o = $('header').classList.toggle('open'); $('#menu').setAttribute('aria-expanded', o); };
+const sheet = () => { const o = $('#right').classList.toggle('open'); $('#qhd').setAttribute('aria-expanded', o); };
+$('#qhd').onclick = () => { if (SMALL()) sheet(); };
+$('#qhd').onkeydown = e => { if (SMALL() && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); sheet(); } };
 $('#go').onclick = async () => {
   busy(true);
   try {
@@ -778,7 +824,7 @@ $('#go').onclick = async () => {
 (async function boot() {
   const m = await (await fetch('/meta')).json();
   const on = m.model && m.model.online;
-  $('#p-sys').textContent = `${m.data_backend} · ${on ? 'nemotron' : 'model offline'}`; $('#p-sys').className = 'pill ' + (m.data_backend === 'zetaris' && on ? 'on' : '');
+  $('#p-sys').textContent = `${m.data_backend} · ${on ? 'nemotron' : 'model offline'}`; $('#p-sys').className = 'pill opt ' + (m.data_backend === 'zetaris' && on ? 'on' : '');
   const c = ((m.extra || {}).cards || [])[0]; const am = c && /Anchors: (.*)/.exec(c.note || ''); if (am) am[1].split(', ').forEach(kv => { const [k, val] = kv.split('='); if (+val) Z[k] = +val; });
   await load(); listen();
 })();
