@@ -1,10 +1,11 @@
 """Probe loop: the one step where a model chooses what to look at next (run hook app.probe:loop, before the Notary).
 
-For every LATE or AT RISK asset the Investigator asks Nemotron (the fast model) for one rival cause the four fixed
-hypotheses did not cover, plus one read-only SELECT over Mosca's tables that returns rows only if that cause holds. The
-Skeptic runs the statement through Zetaris and the row count decides (rows = supported, none = rejected); the model
-never sets a verdict. The next round sees what the earlier rounds found, and the loop stops when the model has
-nothing new or after PROBE_ROUNDS rounds. A supported probe adds a draft action, which waits for a human like any other.
+For every LATE or AT RISK asset the Investigator works through up to PROBE_ROUNDS checks the four fixed hypotheses do
+not cover (this asset's expiry, the same host, the same data class). For each, Nemotron (the fast model) decides
+whether it applies and writes one read-only SELECT over Mosca's tables that returns rows only if it holds. The Skeptic
+runs the statement through Zetaris and the row count decides (rows = supported, none = rejected); the model never sets
+a verdict. A query that fails, or does not match its scope, goes back with the error for one repair attempt. Every
+round sees what the earlier rounds found. A supported probe adds a draft action, which waits for a human like any other.
 
 Fast by construction: assets are probed in parallel, the hook runs while the Explainer waits on the model, and model
 answers are cached by prompt, so a repeat run on unchanged evidence replays its rounds without a model call (the
@@ -27,28 +28,23 @@ FORBIDDEN = re.compile(r"(?i)\b(insert|update|delete|drop|alter|create|grant|rev
                        r"attach|detach|pragma|set|into|load|install|refresh|cache|uncache|msck|dblink|information_schema|pg_\w+)\b")
 SYSTEM = """You are the Investigator in a post-quantum cryptography audit of the owner's own estate.
 An asset was tested against four fixed hypotheses (harvest_now_decrypt_later, forgery_after_qday, already_hybrid,
-dead_asset). Propose ONE further cause that could change what the owner should do about this asset and that the
-columns below can actually show. Then write one query that returns rows ONLY if that cause holds for this asset.
+dead_asset). You get one focus: a further check that could change what the owner should do about this asset. Decide
+whether it applies to this asset; if it does, write one query that returns rows ONLY if it holds, within the given scope.
 What the data can show: other assets on the same host (host) with weak algorithms or small keys (algorithm, key_bits);
 an expiry date (expires) falling before the migration could finish (migration_paths.migration_years); the asset
 having no expiry at all (expires IS NULL) while in use; other assets of the same data_class that share its kind and
 algorithm; failed or missing handshakes for its host in probes (target LIKE '%host%', outcome).
-What it cannot show: key fingerprints, key reuse between hosts, who has access, patch levels. Do not propose those.
-The query must test the cause itself, not something weaker (finding other Ed25519 keys does not show reuse).
+What it cannot show: key fingerprints, key reuse between hosts, who has access, patch levels.
+The query must test the focus itself, not something weaker.
 Classically weak means: RSA below 2048 bits, DSA, or ECDSA below 256 bits. Ed25519 and ECDSA-256 are classically fine
 (every RSA/ECC key is quantum-vulnerable anyway, which the fixed hypotheses already cover). Algorithm names are stored
 as RSA, ECDSA, Ed25519, X25519 (match case-insensitively with upper()).
-Every probe has a scope. "this": the cause is about this asset; the query must select from assets with
-asset_id = '<its asset_id>' and return it only if the cause holds. "others": the cause is about other assets (same
-host, same data class); the query must include asset_id != '<its asset_id>'. The label must say the same thing.
-Do not repeat a cause from earlier_probes; if an earlier probe failed with an error, you may fix that query instead.
-Work through these in order and take the first one earlier_probes do not cover yet: (1) this asset: no expiry while
-in use, or an expiry before its migration could finish; (2) others on the same host: classically weak keys or failed
-handshakes in probes; (3) others in the same data_class and kind: still on the same algorithm. Answer done only
-when all three are covered.
+Scope "this": select from assets with asset_id = '<its asset_id>' and return it only if the focus holds.
+Scope "others": include asset_id != '<its asset_id>'. The label must describe exactly what the rows mean.
+If earlier_probes holds a failed query for this focus, fix it using its error.
 Reply with JSON only:
-{"done": false, "scope": "this" or "others", "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
-or {"done": true} when nothing new is worth testing.
+{"done": false, "cause": "snake_case_name", "label": "one sentence stating exactly what the rows mean", "sql": "...", "action": "what to do if it holds, imperative, under 90 characters"}
+or {"done": true} when the focus does not apply to this asset.
 Tables (Spark SQL, read-only):
  assets(asset_id, name, host, port, kind, algorithm, key_bits, purpose, negotiated_kex, negotiated_sig, expires, in_use, data_class, traffic_gb_month, source, found_at, note)
  probes(source, target, outcome, probed_at)
@@ -71,79 +67,98 @@ def safe_sql(sql: str) -> str | None:
     return s if re.search(r"(?i)\blimit\s+\d+\s*$", s) else s + " LIMIT 50"
 
 
+CHECKS = [   # one focus per round, in this order; the model decides whether it applies and writes its query
+    ("this", "this asset: no expiry date while in use, or an expiry date before its migration could finish"),
+    ("others", "other assets on the same host: classically weak keys, or failed handshakes for the host in probes"),
+    ("others", "other assets in the same data_class and of the same kind that are still on the same algorithm"),
+]
+
+
+def _round(run, r: dict, facts: dict, tested: dict, probes: list, rnd: int, scope: str, focus: str) -> str:
+    """One round: ask, check, run, decide. Returns 'done' (answered or not applicable), 'retry' (failed, may repair)
+    or 'stop' (no usable answer)."""
+    sid = r["signal"]["id"]
+    user = json.dumps({"asset": facts, "fixed_hypotheses": tested, "focus": focus, "scope": scope,
+                       # earlier probes go back with their errors, so a failed query can be repaired
+                       "earlier_probes": [{k: q.get(k) for k in ("scope", "cause", "verdict", "rows", "sql", "error") if q.get(k) is not None}
+                                          for q in probes]}, default=str, sort_keys=True)
+    run.ledger.step("investigator", "asks the model", signal=sid, round=rnd, probe=True, focus=focus)
+    try:
+        text, meta = model.answer(SYSTEM, user, deep=False, json_mode=True, max_tokens=320)
+        ask = json.loads(re.search(r"\{.*\}", text, re.S).group(0))
+    except Exception as e:
+        run.ledger.step("investigator", "no usable answer", signal=sid, round=rnd, probe=True, error=str(e)[:120])
+        return "stop"
+    if ask.get("done") or not ask.get("sql"):
+        run.ledger.step("investigator", "not applicable here", signal=sid, round=rnd, probe=True, focus=focus)
+        return "done"
+    cause = re.sub(r"[^a-z0-9_]+", "_", str(ask.get("cause") or "probe").lower()).strip("_")[:48] or "probe"
+    label = str(ask.get("label") or cause)[:200]
+    q = {"round": rnd, "scope": scope, "cause": cause, "label": label, "model": meta.get("model"), "cached": bool(meta.get("cached"))}
+    sql = safe_sql(ask["sql"])
+    if not sql:
+        q.update(verdict="refused", rows=0, sql=str(ask["sql"])[:400], error="not a single read-only SELECT on Mosca's tables")
+        run.ledger.step("skeptic", "refused", signal=sid, hypothesis=cause, label=label, probe=True, reason=q["error"])
+        probes.append(q)
+        return "retry"
+    # the query has to match its scope; a mismatch is not run but sent back for repair
+    lit = re.escape(sid)
+    has_self = re.search(rf"asset_id\s*=\s*'{lit}'", sql, re.I)
+    excludes_self = re.search(rf"asset_id\s*(?:!=|<>)\s*'{lit}'", sql, re.I)
+    if (scope == "this" and (excludes_self or not has_self)) or (scope == "others" and not excludes_self):
+        msg = f"scope 'this' needs asset_id = '{sid}' and must not exclude it" if scope == "this" else f"scope 'others' needs asset_id != '{sid}'"
+        q.update(verdict="error", rows=0, sql=sql, error=msg)
+        run.ledger.step("skeptic", "query does not match its scope", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg)
+        probes.append(q)
+        return "retry"
+    try:
+        res = data.run_sql(sql)
+    except Exception as e:
+        # keep the part of Zetaris' answer that says what is wrong ("[UNRESOLVED_COLUMN...] ... `key_id` ...")
+        m = re.search(r"\[[A-Z_.]+\][^\\\"]{0,160}|ParseException[^\\\"]{0,120}", str(e))
+        msg = re.sub(r"\s+", " ", m.group(0) if m else str(e)[:200])[:200]
+        q.update(verdict="error", rows=0, sql=sql, error=msg)
+        run.ledger.step("skeptic", "query failed", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg[:120])
+        probes.append(q)
+        return "retry"
+    n = res["rows_n"]
+    if res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
+        # rows name assets: scope "others" never counts this asset; scope "this" holds only if this asset is in the rows
+        n = sum(1 for row in res["rows"] if (row.get("asset_id") != sid) == (scope == "others"))
+    verdict = "support" if n else "reject"
+    q.update(verdict=verdict, rows=n, sql=sql, sql_executed=res["sql_executed"], sample=res["rows"][:3])
+    probes.append(q)
+    run.ledger.add(Claim(text=f"probe {cause} on {sid}: {label}", kind="probe", sql=sql, sql_executed=res["sql_executed"],
+                         source=data.mode, rows=n, status="supported" if n else "rejected",
+                         data={"round": rnd, "signal": sid, "model": meta.get("model"), "cached": bool(meta.get("cached"))}))
+    run.ledger.step("skeptic", verdict, signal=sid, hypothesis=cause, label=label, rows=n, probe=True,
+                    reason=f"{n} row{'s' if n != 1 else ''} from Zetaris")
+    if n and ask.get("action"):
+        a = {"id": f"{sid}-probe-{cause}", "label": str(ask["action"])[:140], "priority": len(r["actions"]) + 1,
+             "rationale": f"found by probe round {rnd}: {label} ({n} rows)", "props": {"probe": cause}, "status": "draft"}
+        d = memory.decision(a["id"], a["label"])          # a decision on the same follow-up carries over, as for any draft
+        if d:
+            a.update(status=d["status"], decided_in=d["run_id"], decided_at=d["t"])
+        r["actions"].append(a)
+        run.ledger.step("planner", "follow-up drafted", signal=sid, first=a["label"], probe=True)
+    return "done"
+
+
 def _probe(run, r: dict) -> None:
-    sid, p = r["signal"]["id"], r["signal"]["props"]
+    p = r["signal"]["props"]
     facts = {k: p.get(k) for k in ("asset_id", "name", "host", "kind", "algorithm", "key_bits", "purpose", "negotiated_kex",
                                     "negotiated_sig", "expires", "in_use", "data_class", "source", "x", "y")}
     tested = {v["hypothesis_id"]: v["verdict"] for v in r["verdicts"]}
     probes: list[dict] = []
-    for rnd in range(1, MAX_ROUNDS + 1):
-        user = json.dumps({"asset": facts, "fixed_hypotheses": tested,
-                           # a failed query goes back with its error, so the next round can repair it
-                           "earlier_probes": [{k: q.get(k) for k in ("scope", "cause", "verdict", "rows", "sql", "error") if q.get(k) is not None}
-                                              for q in probes]}, default=str, sort_keys=True)
-        run.ledger.step("investigator", "asks the model", signal=sid, round=rnd, probe=True)
-        try:
-            text, meta = model.answer(SYSTEM, user, deep=False, json_mode=True, max_tokens=320)
-            ask = json.loads(re.search(r"\{.*\}", text, re.S).group(0))
-        except Exception as e:
-            run.ledger.step("investigator", "no usable answer", signal=sid, round=rnd, probe=True, error=str(e)[:120])
+    rnd = 0
+    for scope, focus in CHECKS[:MAX_ROUNDS]:
+        for attempt in (1, 2):                    # a failed query gets one repair attempt on the same focus
+            rnd += 1
+            out = _round(run, r, facts, tested, probes, rnd, scope, focus)
+            if out != "retry":
+                break
+        if out == "stop":
             break
-        if ask.get("done") or not ask.get("sql"):
-            run.ledger.step("investigator", "nothing new to test", signal=sid, round=rnd, probe=True)
-            break
-        cause = re.sub(r"[^a-z0-9_]+", "_", str(ask.get("cause") or "probe").lower()).strip("_")[:48] or "probe"
-        label = str(ask.get("label") or cause)[:200]
-        scope = "others" if str(ask.get("scope", "")).lower().startswith("other") else "this"
-        q = {"round": rnd, "scope": scope, "cause": cause, "label": label, "model": meta.get("model"), "cached": bool(meta.get("cached"))}
-        sql = safe_sql(ask["sql"])
-        # the query has to match its scope; a mismatch is not run but sent back, so the next round can repair it
-        lit = re.escape(sid)
-        has_self = re.search(rf"asset_id\s*=\s*'{lit}'", sql or "", re.I)
-        excludes_self = re.search(rf"asset_id\s*(?:!=|<>)\s*'{lit}'", sql or "", re.I)
-        mismatch = sql and ((scope == "this" and (excludes_self or not has_self)) or (scope == "others" and not excludes_self))
-        if mismatch:
-            msg = (f"scope 'this' needs asset_id = '{sid}' and must not exclude it" if scope == "this"
-                   else f"scope 'others' needs asset_id != '{sid}'")
-            q.update(verdict="error", rows=0, sql=sql, error=msg)
-            run.ledger.step("skeptic", "query does not match its scope", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg)
-            probes.append(q)
-            continue
-        if not sql:
-            q.update(verdict="refused", rows=0, sql=str(ask["sql"])[:400])
-            run.ledger.step("skeptic", "refused", signal=sid, hypothesis=cause, label=label, probe=True, reason="not a single read-only SELECT on Mosca's tables")
-            probes.append(q)
-            continue
-        try:
-            res = data.run_sql(sql)
-        except Exception as e:
-            # keep the part of Zetaris' answer that says what is wrong ("[UNRESOLVED_COLUMN...] ... `key_id` ...")
-            m = re.search(r"\[[A-Z_.]+\][^\\\"]{0,160}|ParseException[^\\\"]{0,120}", str(e))
-            msg = re.sub(r"\s+", " ", m.group(0) if m else str(e)[:200])[:200]
-            q.update(verdict="error", rows=0, sql=sql, error=msg)
-            run.ledger.step("skeptic", "query failed", signal=sid, hypothesis=cause, label=label, probe=True, reason=msg[:120])
-            probes.append(q)
-            continue
-        n = res["rows_n"]
-        if res["rows"] and isinstance(res["rows"][0], dict) and "asset_id" in res["rows"][0]:
-            # rows name assets: scope "others" never counts this asset; scope "this" holds only if this asset is in the rows
-            n = sum(1 for row in res["rows"] if (row.get("asset_id") != sid) == (scope == "others"))
-        verdict = "support" if n else "reject"
-        q.update(verdict=verdict, rows=n, sql=sql, sql_executed=res["sql_executed"], sample=res["rows"][:3])
-        probes.append(q)
-        run.ledger.add(Claim(text=f"probe {cause} on {sid}: {label}", kind="probe", sql=sql, sql_executed=res["sql_executed"],
-                             source=data.mode, rows=n, status="supported" if n else "rejected",
-                             data={"round": rnd, "signal": sid, "model": meta.get("model"), "cached": bool(meta.get("cached"))}))
-        run.ledger.step("skeptic", verdict, signal=sid, hypothesis=cause, label=label, rows=n, probe=True,
-                        reason=f"{n} row{'s' if n != 1 else ''} from Zetaris")
-        if n and ask.get("action"):
-            a = {"id": f"{sid}-probe-{cause}", "label": str(ask["action"])[:140], "priority": len(r["actions"]) + 1,
-                 "rationale": f"found by probe round {rnd}: {label} ({n} rows)", "props": {"probe": cause}, "status": "draft"}
-            d = memory.decision(a["id"], a["label"])          # a decision on the same follow-up carries over, as for any draft
-            if d:
-                a.update(status=d["status"], decided_in=d["run_id"], decided_at=d["t"])
-            r["actions"].append(a)
-            run.ledger.step("planner", "follow-up drafted", signal=sid, first=a["label"], probe=True)
     r["probes"] = probes
 
 
