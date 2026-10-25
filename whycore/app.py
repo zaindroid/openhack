@@ -19,7 +19,7 @@ import importlib, os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from whycore import events
+from whycore import auth, events
 from whycore.data import data
 from whycore.memory import memory
 from whycore.model import model
@@ -34,6 +34,10 @@ def load_domain():
 
 DOMAIN = load_domain()
 app = FastAPI(title=DOMAIN.title)
+app.middleware("http")(auth.middleware)
+app.get("/login", response_class=HTMLResponse)(auth.login_page)
+app.post("/login")(auth.login)
+app.get("/logout")(auth.logout)
 RUNS: dict[str, Run] = {}
 KEEP_RUNS = int(os.environ.get("KEEP_RUNS", "20"))           # newest runs kept in memory (runs.jsonl keeps every summary)
 

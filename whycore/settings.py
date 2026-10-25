@@ -20,6 +20,8 @@ class Settings:
     zetaris_user: str | None = _env("ZETARIS_USER", _env("ZETARIS_USERNAME"))
     zetaris_password: str | None = _env("ZETARIS_PASSWORD")
     zetaris_api_key: str | None = _env("ZETARIS_API_KEY")
+    # optional password for everything reached through the Cloudflare edge (whycore/auth.py); off when empty
+    app_password: str = _env("APP_PASSWORD", "")
     zetaris_prefix: str = _env("ZETARIS_PREFIX", "")            # e.g. "kessler_pg." so table names resolve in Zetaris
     # per-table sources, e.g. "assets=mosca_s3.assets,data_classes=mosca_pg.data_classes"; tables not listed get ZETARIS_PREFIX
     zetaris_tables: str = _env("ZETARIS_TABLES", "")
