@@ -7,3 +7,4 @@ infra/.env
 .DS_Store
 app/data/inventory/
 app/data/scanners/targets.yaml
+app/data/sentinel/

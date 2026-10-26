@@ -178,6 +178,21 @@
   .ba div { border:1px solid var(--line2); border-radius:6px; padding:6px 8px; word-break:break-word; color:var(--muted); }
   .ba div b { display:block; font:600 9.5px "IBM Plex Mono", monospace; letter-spacing:1.2px; color:var(--faint); margin-bottom:2px; }
   .ba .pq { color:var(--safe); border-color:color-mix(in srgb, var(--safe) 45%, transparent); }
+  /* sentinel */
+  .tag.sent { color:var(--sent); border-color:color-mix(in srgb, var(--sent) 45%, transparent); pointer-events:auto; cursor:pointer; }
+  .tag.sent.alert { color:var(--late); border-color:color-mix(in srgb, var(--late) 55%, transparent); }
+  .tag.sent i { font-style:normal; opacity:.65; margin-left:6px; }
+  #sent { margin:0 0 12px; padding:8px 10px; border:1px solid var(--line2); border-radius:8px; background:var(--soft); font:11.5px/1.5 "IBM Plex Mono", monospace; color:var(--muted); cursor:pointer; }
+  #sent:empty { display:none; } #sent b { color:var(--sent); font-weight:600; } #sent.alert b { color:var(--late); }
+  .card.sev { --c:var(--late); } .card.sev.medium { --c:var(--risk); } .card.sev.low { --c:var(--retire); }
+  .sevchip { font:600 9.5px "IBM Plex Mono", monospace; letter-spacing:1px; padding:1px 6px; border-radius:3px; text-transform:uppercase; color:var(--c); border:1px solid color-mix(in srgb, var(--c) 50%, transparent); }
+  .critical, .high { --c:var(--late); } .medium { --c:var(--risk); } .low { --c:var(--retire); }
+  .checks { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+  .checks div { border:1px solid var(--line2); border-radius:6px; padding:5px 8px; font-size:11px; color:var(--muted); }
+  .checks b { display:block; font:600 15px Inter, sans-serif; color:var(--text); }
+  .fd { padding:9px 0; border-top:1px solid var(--line2); } .fd:first-of-type { border-top:0; }
+  .fd .t { display:flex; gap:8px; align-items:flex-start; font-size:12.5px; } .fd .t span:last-child { flex:1; }
+  .fd .r { font:11px "IBM Plex Mono", monospace; color:var(--faint); margin:4px 0 6px; word-break:break-all; }
   .menu, .chev { display:none; }
   /* tablet and phone: counts become a strip under the header; legend, feed and hints go */
   @media (max-width:1100px) {
@@ -247,12 +262,14 @@
     <button class="stat safe" data-f="safe"><b id="c-safe">–</b><span>safe</span></button>
   </div>
   <div id="speed"></div>
+  <div id="sent" title="Open the sentinel"></div>
   <div class="legend">
     <div class="lg"><i style="--c:var(--agent)">◆</i>Agents</div>
     <div class="lg"><i style="--c:var(--core)">⬡</i>Zetaris gateway</div>
     <div class="lg"><i style="--c:var(--infra)">▤</i>Data sources</div>
     <div class="lg"><i style="--c:var(--core)">◈</i>Notary vault</div>
     <div class="lg"><i style="--c:var(--text)">●</i>Your assets</div>
+    <div class="lg"><i style="--c:var(--sent)">▲</i>Sentinel · your hosts</div>
     <div class="lg"><i style="--c:var(--risk)">┃</i>Needs a decision</div>
   </div>
   <div class="rule">late when <code>x + y &gt; z − now</code></div>
@@ -296,22 +313,22 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Themes: the glow lives in lines (outlines, rings, conduits, halos) and bloom picks those up; solids stay matte.
 const THEMES = {
   nebula:   { name:'Nebula', dark:true, bloom:[.95, .55, .28], amb:.55, key:.9, fog:.010, edge:.95, glow:1,
-              c:{ bg:0x060a12, grid1:0x16233c, grid2:0x0c1424, solid:0x18233a, infra:0x4f8dff, core:0x22d3ee, agent:0xa78bfa, ring:0x1f4f9a, screen:0x0f3b30 },
+              c:{ bg:0x060a12, grid1:0x16233c, grid2:0x0c1424, solid:0x18233a, infra:0x4f8dff, core:0x22d3ee, agent:0xa78bfa, ring:0x1f4f9a, sent:0x34d399, screen:0x0f3b30 },
               st:{ late:0xff5a6a, risk:0xffb547, retire:0x8e99ad, safe:0x34e3a6 },
               css:{ bg:'#060a12', panel:'rgba(9,14,26,.82)', line:'#1d2a42', line2:'#141e31', text:'#e6edf7', muted:'#93a0b6', faint:'#5d6a80', soft:'rgba(255,255,255,.025)',
                     drawer:'#0a101c', tagbg:'rgba(8,13,24,.85)', tagline:'#22314d', tagtext:'#b9c8e4', shadow:'rgba(0,0,0,.45)', accent:'#3e7bfa', tglow:'14px', edgeglow:'22%', edgeglow2:'85%' } },
   aurora:   { name:'Aurora', dark:true, bloom:[.9, .6, .28], amb:.55, key:.85, fog:.010, edge:.95, glow:1,
-              c:{ bg:0x05141b, grid1:0x113640, grid2:0x0a2229, solid:0x12303a, infra:0x2dd4bf, core:0x5eead4, agent:0xc084fc, ring:0x13616a, screen:0x0f3b30 },
+              c:{ bg:0x05141b, grid1:0x113640, grid2:0x0a2229, solid:0x12303a, infra:0x2dd4bf, core:0x5eead4, agent:0xc084fc, ring:0x13616a, sent:0x86efac, screen:0x0f3b30 },
               st:{ late:0xff6b81, risk:0xfbbf24, retire:0x8fa3ad, safe:0x4ade80 },
               css:{ bg:'#05141b', panel:'rgba(6,24,31,.82)', line:'#163a42', line2:'#0f2b32', text:'#e2f3f2', muted:'#8fb3b5', faint:'#5a7c80', soft:'rgba(255,255,255,.03)',
                     drawer:'#071c23', tagbg:'rgba(5,22,28,.85)', tagline:'#1a4a52', tagtext:'#b5e3de', shadow:'rgba(0,0,0,.45)', accent:'#14b8a6', tglow:'14px', edgeglow:'24%', edgeglow2:'85%' } },
   graphite: { name:'Graphite', dark:true, bloom:[.4, .4, .55], amb:1, key:1.3, fog:.008, edge:.6, glow:.7,
-              c:{ bg:0x14161b, grid1:0x262a33, grid2:0x1c1f26, solid:0x2a2f3a, infra:0x8fa3c4, core:0x9fd0dc, agent:0x9f94f0, ring:0x343a46, screen:0x2c4a40 },
+              c:{ bg:0x14161b, grid1:0x262a33, grid2:0x1c1f26, solid:0x2a2f3a, infra:0x8fa3c4, core:0x9fd0dc, agent:0x9f94f0, ring:0x343a46, sent:0x7fc8a9, screen:0x2c4a40 },
               st:{ late:0xe5484d, risk:0xd99a2b, retire:0x7c8494, safe:0x3fa37f },
               css:{ bg:'#14161b', panel:'rgba(24,27,33,.92)', line:'#2a2f39', line2:'#22262e', text:'#e4e7ec', muted:'#9aa1ad', faint:'#686f7b', soft:'rgba(255,255,255,.025)',
                     drawer:'#181b21', tagbg:'rgba(22,25,31,.9)', tagline:'#323844', tagtext:'#c3c9d4', shadow:'rgba(0,0,0,.35)', accent:'#4f7cf7', tglow:'0px', edgeglow:'10%', edgeglow2:'40%' } },
   daylight: { name:'Daylight', dark:false, bloom:[.18, .3, .92], amb:1.6, key:1.6, fog:.006, edge:.9, glow:.85,
-              c:{ bg:0xeef2f7, grid1:0xc6cfdc, grid2:0xdce2ea, solid:0xdbe2ec, infra:0x2f5fd0, core:0x0e8fb0, agent:0x6d4ad8, ring:0xb3bfd0, screen:0xbfe3d4 },
+              c:{ bg:0xeef2f7, grid1:0xc6cfdc, grid2:0xdce2ea, solid:0xdbe2ec, infra:0x2f5fd0, core:0x0e8fb0, agent:0x6d4ad8, ring:0xb3bfd0, sent:0x0f9d6b, screen:0xbfe3d4 },
               st:{ late:0xe0464c, risk:0xf0a020, retire:0x8a93a3, safe:0x22a06f },
               css:{ bg:'#eef2f7', panel:'rgba(255,255,255,.88)', line:'#d5dce6', line2:'#e6eaf0', text:'#141821', muted:'#5f6878', faint:'#8a93a3', soft:'rgba(15,23,42,.03)',
                     drawer:'#ffffff', tagbg:'rgba(255,255,255,.92)', tagline:'#cfd7e3', tagtext:'#3a4456', shadow:'rgba(16,24,40,.10)', accent:'#2f5fd0', tglow:'0px', edgeglow:'30%', edgeglow2:'70%' } },
@@ -452,6 +469,63 @@ memory.position.set(0, 9.5, 0); memory.rotation.x = Math.PI / 2; scene.add(memor
 INFRA.memory = { top:new THREE.Vector3(5.6, 9.5, 0) };
 label('<small>MEMORY</small>H-MEM', 'infra', new THREE.Vector3(-5.6, 10.6, 0));
 
+// sentinel: a watch tower per host the owner runs, on the left flank; small drones patrol it and a ring rolls out from
+// its base on every real sweep (app/sentinel/sweep.py, read through Zetaris). Towers turn red while findings are open.
+const SENT = {}, sentGroup = new THREE.Group(); scene.add(sentGroup);
+let SENTDATA = null;
+function tower(host, i, n) {
+  const a = Math.PI + (i - (n - 1) / 2) * .38, pos = new THREE.Vector3(Math.cos(a) * 47, 0, Math.sin(a) * 47);
+  const g = new THREE.Group(); g.position.copy(pos); sentGroup.add(g);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.7, 1.3, 6, 6), mat()); body.position.y = 3; body.userData.host = host;
+  const be = edge(body.geometry, COL.sent, .9, 25, 'sent'); be.position.y = 3;
+  const crown = new THREE.Mesh(new THREE.TorusGeometry(1.5, .05, 8, 64), reg(new THREE.MeshBasicMaterial({ color:COL.sent, transparent:true, opacity:.85 }), 'sent'));
+  crown.rotation.x = Math.PI / 2; crown.position.y = 6.4;
+  const eye = new THREE.Mesh(new THREE.OctahedronGeometry(.45, 0), new THREE.MeshBasicMaterial({ color:COL.sent }));
+  eye.position.y = 7.2;
+  const pulse = new THREE.Mesh(new THREE.RingGeometry(.97, 1, 96), new THREE.MeshBasicMaterial({ color:COL.sent, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }));
+  pulse.rotation.x = -Math.PI / 2; pulse.position.y = .05;
+  g.add(body, be, crown, eye, pulse);
+  const drones = [0, 1, 2].map(k => { const d = new THREE.Mesh(new THREE.OctahedronGeometry(.28, 0), reg(new THREE.MeshBasicMaterial({ color:COL.sent }), 'sent'));
+    sentGroup.add(d); return { m:d, a0:k * Math.PI * 2 / 3, r:2.6 + k * .5, h:3 + k * 1.4 }; });
+  const top = new THREE.Vector3(pos.x, 7.2, pos.z);
+  const lbl = label(`<small>SENTINEL</small>${esc(host)}<i></i>`, 'infra sent', new THREE.Vector3(pos.x, 8.6, pos.z));
+  lbl.el.onclick = () => openHost(host);
+  conduit(top, INFRA.zetaris.top, 'sent', .35, 5);
+  SENT[host] = { g, body, crown, eye, pulse, drones, top, lbl, pos, swept:0, alert:false };
+}
+function syncSentinel(d) {
+  SENTDATA = d;
+  const hosts = d.hosts || [];
+  hosts.forEach((h, i) => { if (!SENT[h.host]) tower(h.host, i, Math.max(hosts.length, 1)); });
+  const open = (d.findings || []).filter(f => f.status === 'open');
+  for (const h of hosts) { const t = SENT[h.host], n = open.filter(f => f.host === h.host).length, worst = worstSev(open.filter(f => f.host === h.host));
+    t.alert = n > 0; t.sev = worst; t.swept = Date.parse(h.sweep_time) || 0; t.h = h;
+    t.lbl.el.classList.toggle('alert', t.alert);
+    t.eye.material.color.setHex(t.alert ? (worst === 'medium' ? COL.risk : worst === 'low' ? COL.retire : COL.late) : COL.sent); }
+  sentLine(); buildQueue(QITEMS);
+  if (OPENHOST) openHost(OPENHOST);
+}
+const SEVN = { critical:4, high:3, medium:2, low:1 };
+const worstSev = fs => fs.reduce((w, f) => SEVN[f.severity] > (SEVN[w] || 0) ? f.severity : w, null);
+const ago = t => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 90 ? s + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : Math.round(s / 3600) + ' h'; };
+function sentLine() {
+  const d = SENTDATA, el = $('#sent'); if (!d) return;
+  if (!(d.hosts || []).length) { el.innerHTML = d.error ? `sentinel · <span title="${esc(d.error)}">not reading yet</span>` : ''; return; }
+  const open = (d.findings || []).filter(f => f.status === 'open').length, last = Math.max(...Object.values(SENT).map(t => t.swept));
+  el.className = open ? 'alert' : '';
+  el.innerHTML = `<b>▲ ${open ? open + ' open alert' + (open > 1 ? 's' : '') : 'all clear'}</b><br>${d.hosts.length} host${d.hosts.length > 1 ? 's' : ''} watched · swept ${ago(last)} ago`;
+  for (const host in SENT) SENT[host].lbl.el.querySelector('i').textContent = SENT[host].alert ? '' : ago(SENT[host].swept);
+}
+setInterval(sentLine, 1000);
+async function loadSentinel() { try { const r = await fetch('/sentinel'); if (r.ok) syncSentinel(await r.json()); } catch (_) {} }
+setInterval(loadSentinel, 30000);
+function sweepFx(host) {
+  const t = SENT[host]; if (!t) return;
+  t.pulseT = performance.now();
+  t.drones.forEach((d, k) => setTimeout(() => shot(d.m.position.clone(), t.top, COL.sent, 500, 1.5, false), k * 120));
+  setTimeout(() => { shot(t.top, INFRA.zetaris.top, COL.sent, 1000, 5); setTimeout(() => gatePulse = 1, 950); }, 450);
+}
+
 // agents: violet tetra drones with a halo, a different shape family from everything else
 const AGENTS = {};
 const AG = [['scout', 'SCOUT'], ['investigator', 'INVESTIGATOR'], ['skeptic', 'SKEPTIC'], ['planner', 'PLANNER'], ['explainer', 'EXPLAINER']];
@@ -535,15 +609,41 @@ function buildAssets() {
 }
 
 const PREV = {};   // last colour shown per asset, so a slider move flashes only the assets that changed
+let QITEMS = [];
+function sentCards() {
+  const fs = ((SENTDATA || {}).findings || []).filter(f => f.status === 'open').sort((a, b) => SEVN[b.severity] - SEVN[a.severity]);
+  return fs.map(f => `<div class="card sev ${esc(f.severity)}" data-host="${esc(f.host)}"><div class="t"><span class="chip">▲ ${esc(f.severity.toUpperCase())}</span><span class="n" title="${esc(f.title)}">${esc(f.host)}</span></div>
+    <div class="a" title="${esc(f.title)}">${esc(f.title)}</div>
+    <div class="row"><button class="ok" data-f="${esc(f.finding_id)}" data-d="expected">Expected</button><button class="no" data-f="${esc(f.finding_id)}" data-d="incident">Incident</button></div></div>`).join('');
+}
+function wireSentCards(root) {
+  root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => decideFinding(b, b.dataset.f, b.dataset.d));
+  root.querySelectorAll('.card[data-host] .n').forEach(n => n.onclick = () => openHost(n.closest('.card').dataset.host));
+}
+async function decideFinding(btn, fid, d) {
+  const box = btn.closest('.card, .fd'); box?.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch('/sentinel/decide', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ finding_id:fid, decision:d }) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const f = await r.json(), t = SENT[f.host];
+    if (t) shot(INFRA.human.top, t.top, d === 'expected' ? COL.safe : COL.late, 1000);
+    box?.classList.add('gone');
+    toast(d === 'expected' ? `Marked expected: the next sweep takes it into ${f.host}'s baseline.` : `Recorded as an incident on ${f.host}. Nothing on the host was changed.`);
+    setTimeout(loadSentinel, 400);
+  } catch (e) { toast('Could not record the decision: ' + e.message); box?.querySelectorAll('button').forEach(b => b.disabled = false); }
+}
 function buildQueue(items) {
+  QITEMS = items;
   const q = items.filter(x => x.st !== 'safe' && nextAction(x.res)).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
-  $('#nq').textContent = q.length;
-  $('#queue').innerHTML = q.length ? q.map(({ res, p, st }) => { const a = nextAction(res);
+  const sc = sentCards(), ns = ((SENTDATA || {}).findings || []).filter(f => f.status === 'open').length;
+  $('#nq').textContent = q.length + ns;
+  $('#queue').innerHTML = sc + (q.length ? q.map(({ res, p, st }) => { const a = nextAction(res);
     return `<div class="card ${st}" data-id="${esc(p.asset_id)}"><div class="t"><span class="chip">${ST[st]}</span><span class="n" title="${esc(p.name)}">${esc(short(p))}</span></div>
       <div class="a" title="${esc(a.label)}">${esc(a.label)}</div>
       <div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div></div>`; }).join('')
-    : '<div style="color:var(--muted);padding:10px">Nothing waiting.</div>';
-  $('#queue').querySelectorAll('.card').forEach(c => {
+    : sc ? '' : '<div style="color:var(--muted);padding:10px">Nothing waiting.</div>');
+  wireSentCards($('#queue'));
+  $('#queue').querySelectorAll('.card[data-id]').forEach(c => {
     const id = c.dataset.id;
     c.onmouseenter = () => hover(id, true); c.onmouseleave = () => hover(id, false);
     c.querySelector('.n').onclick = () => focusAsset(id, true);
@@ -592,7 +692,9 @@ canvas.addEventListener('pointerup', e => {
   mouse.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);   // a tap has no hover before it
   ray.setFromCamera(mouse, camera);
   const hit = ray.intersectObjects(assetGroup.children.filter(m => m.userData.id))[0];
-  if (hit) focusAsset(hit.object.userData.id, true);
+  if (hit) return focusAsset(hit.object.userData.id, true);
+  const th = ray.intersectObjects(Object.values(SENT).map(s => s.body))[0];
+  if (th) openHost(th.object.userData.host);
 });
 
 // ---------- energy shots between things ----------
@@ -654,6 +756,13 @@ function frame(now) {
     m.scale.setScalar(1 + o.flash * .35 + (HOVER === id ? .25 : 0));
     if (o.beacon) o.beacon.material.opacity = ((o.dim ? .12 : .4 + (Math.sin(t * 2 + o.phase) + 1) * .15) + (HOVER === id ? .35 : 0)) * T.glow;
   }
+  for (const host in SENT) { const s = SENT[host];
+    s.crown.rotation.z = t * (s.alert ? 2.2 : .8); s.eye.rotation.y = t * 1.5; s.eye.scale.setScalar(s.alert ? 1 + (Math.sin(t * 5) + 1) * .25 : 1);
+    s.drones.forEach((d, k) => { const a = d.a0 + t * (.9 + k * .25) * (k % 2 ? -1 : 1);
+      d.m.position.set(s.pos.x + Math.cos(a) * d.r, d.h + Math.sin(t * 2 + k) * .3, s.pos.z + Math.sin(a) * d.r); d.m.rotation.y = t * 3; });
+    const u = s.pulseT ? (now - s.pulseT) / 1600 : 2;
+    s.pulse.material.opacity = u < 1 ? (1 - u) * .8 * T.glow : 0; s.pulse.scale.setScalar(1 + u * 9);
+    s.pulse.material.color.setHex(s.alert ? COL.late : COL.sent); }
   for (let i = SHOTS.length - 1; i >= 0; i--) { const s = SHOTS[i], u = (now - s.t0) / s.dur;
     if (u >= 1.4) { scene.remove(s.m, s.line); s.m.material.dispose(); s.line.geometry.dispose(); s.line.material.dispose(); SHOTS.splice(i, 1); continue; }
     if (u <= 1) s.m.position.copy(s.curve.getPoint(u)); else s.m.visible = false;
@@ -674,8 +783,8 @@ function applyTheme(name) {
   for (const [k, v] of Object.entries(T.css)) root.setProperty('--' + k, v);
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   for (const k of ['late', 'risk', 'retire', 'safe']) root.setProperty('--' + k, hex(T.st[k]));
-  for (const k of ['agent', 'infra', 'core']) root.setProperty('--' + k, hex(T.c[k]));
-  Object.assign(COL, T.st, { agent:T.c.agent, infra:T.c.infra, core:T.c.core });
+  for (const k of ['agent', 'infra', 'core', 'sent']) root.setProperty('--' + k, hex(T.c[k]));
+  Object.assign(COL, T.st, { agent:T.c.agent, infra:T.c.infra, core:T.c.core, sent:T.c.sent });
   scene.background.setHex(T.c.bg); scene.fog.color.setHex(T.c.bg); scene.fog.density = T.fog;
   [bloom.strength, bloom.radius, bloom.threshold] = T.bloom;
   amb.intensity = T.amb; key.intensity = T.key; coreLight.color.setHex(T.c.core);
@@ -721,7 +830,7 @@ function moscaBar(p, st) {
     <rect x="${X(ym)}" y="9" width="0" height="16" rx="3" fill="${c}" class="seg" data-w="${Math.max(0, X(end) - X(ym))}"><title>x = ${x} years it must stay safe</title></rect></svg></div>`;
 }
 function openDrawer(id) {
-  const o = ASSET[id]; if (!o) return; OPEN = id; const { res, p, st } = o, d = $('#drawer');
+  const o = ASSET[id]; if (!o) return; OPEN = id; OPENHOST = null; const { res, p, st } = o, d = $('#drawer');
   const drafts = res.actions.slice().sort((a, b) => a.priority - b.priority), rec = drafts.find(a => a.status === 'draft'), rest = drafts.filter(a => a !== rec && (rec || a !== drafts.find(x => x.status !== 'draft')));
   const btns = a => a.status === 'draft' ? `<div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div>`
     : `<span class="s">${esc(a.status)}${a.decided_in ? ' in run ' + esc(a.decided_in) : ''}${a.applied ? ' · ' + esc(a.applied.message || '') : ''}</span>`;
@@ -778,7 +887,29 @@ async function verify(id, actionId) {
   } catch (e) { toast('Could not verify: ' + e.message); }
   if (OPEN === id) showProofs(id, { id:actionId });
 }
-function closeDrawer() { OPEN = null; $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); }
+let OPENHOST = null;
+function openHost(host) {
+  const t = SENT[host], d = $('#drawer'); if (!t || !SENTDATA) return; OPEN = null; OPENHOST = host;
+  const h = t.h, fs = (SENTDATA.findings || []).filter(f => f.host === host), open = fs.filter(f => f.status === 'open'), done = fs.filter(f => f.status !== 'open');
+  const sev = open.length ? worstSev(open) : null;
+  d.className = 'on';
+  d.innerHTML = `<div class="dh"><span class="chip ${sev ? (sev === 'medium' ? 'risk' : sev === 'low' ? 'retire' : 'late') : 'safe'}">▲ ${sev ? esc(sev.toUpperCase()) : 'CLEAR'}</span><div><div class="nm">${esc(host)}</div><div class="sb">sentinel · swept ${ago(t.swept)} ago · ${esc(h.probe_s)} s</div></div><button class="x" aria-label="Close">×</button></div>
+    <div class="say" style="color:var(${open.length ? '--late' : '--sent'})">${open.length ? `${open.length} change${open.length > 1 ? 's' : ''} since the baseline need${open.length > 1 ? '' : 's'} your call.` : 'Nothing changed since the baseline.'}</div>
+    <section><div class="checks"><div><b>${esc(h.ports)}</b>listeners</div><div><b>${esc(h.files)}</b>watched files</div><div><b>${esc(h.units)}</b>enabled units</div>
+      <div><b>${esc(h.containers)}</b>containers</div><div><b>${esc(h.packages)}</b>packages</div><div><b>${esc(h.auth_failed)}</b>failed SSH</div></div></section>
+    <section>${open.length ? open.map(f => `<div class="fd"><div class="t"><span class="sevchip ${esc(f.severity)}">${esc(f.severity)}</span><span>${esc(f.title)}</span></div>
+        <div class="r">${f.baseline_value ? 'baseline ' + esc(f.baseline_value) + ' → now ' + esc(f.value) + ' · ' : ''}first seen ${esc(f.first_seen)}${f.detail ? ' · ' + esc(f.detail) : ''}</div>
+        <div class="row"><button class="ok" data-f="${esc(f.finding_id)}" data-d="expected">Expected</button><button class="no" data-f="${esc(f.finding_id)}" data-d="incident">Incident</button></div></div>`).join('')
+      : '<span class="s">No open findings. The towers stay green while every check matches the baseline.</span>'}</section>
+    <details class="ev"><summary>Evidence${done.length ? ` · ${done.length} decided or resolved` : ''}</summary>
+      ${done.map(f => `<div class="fd"><div class="t"><span class="sevchip ${esc(f.severity)}">${esc(f.status)}</span><span>${esc(f.title)}</span></div></div>`).join('')}
+      <h6>Read through Zetaris</h6>${(SENTDATA.sql_executed || SENTDATA.sql || []).map(q => `<pre>${esc(q)}</pre>`).join('')}
+      <div class="meta">snapshot sha256 ${esc((h.snapshot_sha256 || '').slice(0, 32))}… · baseline ${esc(h.baseline_set)} · CVEs checked ${esc(h.cve_checked_at || 'not yet')} (OSV)</div>
+    </details>`;
+  d.querySelector('.x').onclick = closeDrawer; wireSentCards(d);
+  d.setAttribute('aria-hidden', 'false');
+}
+function closeDrawer() { OPEN = null; OPENHOST = null; $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
 // ---------- decisions: a human approves, the notary signs ----------
@@ -854,6 +985,11 @@ function onEv(ev) {
     case 'signal': { seen++; $('#prog').style.width = Math.min(100, seen / Math.max(1, RUN ? RUN.results.length : 100) * 100) + '%';
       sendAgent('scout', sig, 700); if (ASSET[sig]) { ASSET[sig].flash = .8; shot(agentPos('scout').clone(), ASSET[sig].pos, COL.agent, 500); }
       feed('ag', `scout → ${ASSET[sig] ? short(ASSET[sig].p) : sig}`); break; }
+    case 'sentinel': {
+      if (ev.what === 'sweep') { sweepFx(ev.host); feed('in', `sentinel · ${ev.host} swept · ${ev.open} open`); }
+      if (ev.what === 'finding') { const tw = SENT[ev.host]; if (tw) { shot(tw.top, INFRA.human.top, COL.late, 1300, 8); }
+        toast(`Sentinel · ${ev.host}: ${ev.title}`); feed('ag', `sentinel · ${ev.severity} · ${ev.title}`); }
+      setTimeout(loadSentinel, 300); break; }
     case 'proof': { const o = ASSET[sig]; if (o) { o.flash = 1; shot(o.pos, core.position, ev.outcome === 'fixed' || ev.outcome === 'already' ? COL.safe : COL.risk, 1100); }
       setTimeout(() => corePulse = 1, 1000); feed('in', `proof · ${ASSET[sig] ? short(ASSET[sig].p) : sig} · ${ev.outcome} · signed`); break; }
     case 'model': { shot(INFRA.model.top, agentPos('explainer').clone(), COL.infra, 650); const a = AGENTS.explainer; a.target = INFRA.model.top.clone().add(new THREE.Vector3(-4, 2.5, 0)); a.until = performance.now() + 600;
@@ -929,6 +1065,7 @@ $('#go').onclick = async () => {
   $('#p-sys').textContent = `${m.data_backend} · ${on ? 'nemotron' : 'model offline'}`; $('#p-sys').className = 'pill opt ' + (m.data_backend === 'zetaris' && on ? 'on' : '');
   const c = ((m.extra || {}).cards || [])[0]; const am = c && /Anchors: (.*)/.exec(c.note || ''); if (am) am[1].split(', ').forEach(kv => { const [k, val] = kv.split('='); if (+val) Z[k] = +val; });
   initQday(); await load(); listen();
+  loadSentinel(); $('#sent').onclick = () => { const h = Object.keys(SENT)[0]; if (h) openHost(h); };
   const h = /asset=([^&]+)/.exec(location.hash); if (h) focusAsset(decodeURIComponent(h[1]), true);   // a link straight to one asset
 })();
 </script>

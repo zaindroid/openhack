@@ -8,7 +8,8 @@ POST /proof             {run_id, action_id}: after a human approved an action, h
                         before / approval / after with the notary (ML-DSA). Only assets in that run's inventory, which
                         only ever holds targets.yaml scans. Stored in MEMORY_DIR/proofs/proofs.jsonl.
 GET  /proofs            proofs, newest first (?asset=ID for one asset)
-GET  /proofs/{id}       one proof with its attestation, as a download"""
+GET  /proofs/{id}       one proof with its attestation, as a download
+/sentinel/*             the live security sentinel (app/sentinel/api.py)"""
 from __future__ import annotations
 import json, os, re, sys, threading, time
 from types import SimpleNamespace
@@ -20,8 +21,10 @@ from whycore.memory import memory
 from whycore.settings import settings
 from app import domain as M
 from app import notary
+from app.sentinel import api as sentinel
 
 router = APIRouter()
+router.include_router(sentinel.router)
 STATUS = {"LATE": "late", "AT RISK": "risk", "DEAD (retire)": "retire", "SAFE": "safe"}
 GAP = M.Z[M.PRIMARY] - M.Z[M.EARLIEST]
 
