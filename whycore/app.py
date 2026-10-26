@@ -13,6 +13,7 @@ GET  /memory      memory stats · DELETE /memory resets it
 POST /ask/start   start a run in the background → {run_id}; watch it on GET /events (SSE) and GET /live
 GET  /events      Server-Sent Events: every step, query and model call as it happens
 GET  /live        the live portal: the agent pipeline at work, animated
+An idea may add its own endpoints: `router` (a FastAPI APIRouter) in app/routes.py is included when present.
 """
 from __future__ import annotations
 import importlib, os
@@ -198,3 +199,14 @@ def ui_page(name: str):
 def report():
     with open(os.path.join(os.path.dirname(__file__), "static", "index.html"), encoding="utf-8") as f:
         return f.read()
+
+
+def include_idea_routes() -> None:
+    """The idea's own endpoints: `router` in <domain package>.routes, when it ships one (behind the same auth)."""
+    import importlib.util
+    pkg = type(DOMAIN).__module__.rpartition(".")[0]
+    if pkg and importlib.util.find_spec(pkg + ".routes"):
+        app.include_router(importlib.import_module(pkg + ".routes").router)
+
+
+include_idea_routes()
