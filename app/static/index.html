@@ -616,7 +616,7 @@ function buildAssets() {
   }
   const counts = { broken:0, late:0, risk:0, exposed:0, retire:0, safe:0 }; items.forEach(x => counts[x.st]++);
   for (const k in counts) $('#c-' + k).textContent = counts[k];
-  $('.stat.broken').hidden = !counts.broken;
+  $('.stat.broken').hidden = !counts.broken; $('.stat.exposed').hidden = !!counts.broken;   // past Q-day nothing is still waiting to break
   $('#left .stats').classList.toggle('wi', WI());
   for (const k in PREV) delete PREV[k]; items.forEach(x => PREV[x.p.asset_id] = x.st);
   // decisions stay on the run's own verdicts: a what-if never drafts or approves anything
