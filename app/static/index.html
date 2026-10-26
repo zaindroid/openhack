@@ -81,6 +81,8 @@
   .tag.att { pointer-events:auto; cursor:pointer; color:var(--c); padding:1px 6px; border:1px solid color-mix(in srgb, var(--c) 45%, transparent); border-radius:3px; background:var(--tagbg); }
   .tag.att:hover { background:var(--c); color:var(--bg); }
   .tag[hidden] { display:none; }
+  .qsec { display:flex; justify-content:space-between; margin:10px 2px 6px; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.4px; color:var(--muted); text-transform:uppercase; }
+  .qsec:first-child { margin-top:2px; } .qsec b { color:var(--text); }
   #tip { position:fixed; pointer-events:none; display:none; z-index:5; padding:8px 10px; font-size:12px; max-width:280px; }
   #tip b { display:block; }
 
@@ -650,11 +652,13 @@ function buildQueue(items) {
   const q = items.filter(x => x.st !== 'safe' && nextAction(x.res)).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
   const sc = sentCards(), ns = ((SENTDATA || {}).findings || []).filter(f => f.status === 'open').length;
   $('#nq').textContent = q.length + ns;
-  $('#queue').innerHTML = sc + (q.length ? q.map(({ res, p, st }) => { const a = nextAction(res);
+  // two queues, each in its own order: quantum migration (late → at risk → retire), then the sentinel (high → low)
+  const sec = (name, n) => `<div class="qsec"><span>${name}</span><b>${n}</b></div>`;
+  $('#queue').innerHTML = (q.length ? sec('Quantum migration', q.length) : '') + (q.length ? q.map(({ res, p, st }) => { const a = nextAction(res);
     return `<div class="card ${st}" data-id="${esc(p.asset_id)}"><div class="t"><span class="chip">${ST[st]}</span><span class="n" title="${esc(p.name)}">${esc(short(p))}</span></div>
       <div class="a" title="${esc(a.label)}">${esc(a.label)}</div>
-      <div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div></div>`; }).join('')
-    : sc ? '' : '<div style="color:var(--muted);padding:10px">Nothing waiting.</div>');
+      <div class="row"><button class="ok" data-a="${esc(a.id)}">Approve</button><button class="no" data-a="${esc(a.id)}">Reject</button></div></div>`; }).join('') : '')
+    + (ns ? sec('Security sentinel', ns) + sc : '') + (q.length || ns ? '' : '<div style="color:var(--muted);padding:10px">Nothing waiting.</div>');
   wireSentCards($('#queue'));
   $('#queue').querySelectorAll('.card[data-id]').forEach(c => {
     const id = c.dataset.id;

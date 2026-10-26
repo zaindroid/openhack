@@ -77,7 +77,7 @@ def cname(n: str) -> str:
     return re.sub(r"-\d{9,}$", "", n)          # Coolify adds a deploy suffix; the service is the same
 
 
-def diff(host: str, base: dict, snap: dict, seen_src: set, ignore: tuple = ()) -> list[dict]:
+def diff(host: str, base: dict, snap: dict, seen_src: set, ignore: tuple = (), ignore_udp: tuple = ()) -> list[dict]:
     out = []
 
     def f(check, sev, title, subject, value="", detail="", base_value=""):
@@ -85,7 +85,9 @@ def diff(host: str, base: dict, snap: dict, seen_src: set, ignore: tuple = ()) -
                     "subject": str(subject), "value": str(value), "baseline_value": str(base_value), "detail": detail})
 
     key = lambda p: f"{p['proto']} {p['addr']}:{p['port']}"
-    bp, sp = {key(p): p for p in base["ports"]}, {key(p): p for p in snap["ports"]}
+    # targets.yaml ignore_udp: processes whose UDP sockets are ephemeral by design (cloudflared's QUIC, a new port per connection)
+    eph = lambda p: p["proto"].startswith("udp") and any(i == (p["proc"] or "") for i in ignore_udp)
+    bp, sp = {key(p): p for p in base["ports"] if not eph(p)}, {key(p): p for p in snap["ports"] if not eph(p)}
     for k in sp.keys() - bp.keys():
         public = sp[k]["addr"] in ("0.0.0.0", "*", "::")
         f("port_new", "high" if public else "medium", f"new {'public ' if public else ''}listener {k} ({sp[k]['proc'] or 'unknown process'})", k, sp[k]["proc"])
@@ -281,7 +283,7 @@ def main(argv: list[str]) -> int:
                 fnd["status"] = decided[k]
                 if decided[k] == "expected":
                     fold(base, seen, fnd, snap)
-        cur = [] if first else diff(name, base, snap, seen, tuple(h.get("ignore_images", [])))
+        cur = [] if first else diff(name, base, snap, seen, tuple(h.get("ignore_images", [])), tuple(h.get("ignore_udp", [])))
         sw = sweeps.get(name, {})
         if "--cves" in argv or snap["packages"]["sha256"] != sw.get("packages_sha") or time.time() - sw.get("cve_t", 0) > CVE_EVERY_S:
             try:
