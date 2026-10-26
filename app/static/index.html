@@ -153,9 +153,35 @@
   #speed:empty { display:none; } #speed b { color:var(--text); font-weight:600; } #speed .t { font:600 18px Inter, sans-serif; color:var(--core); }
   .pr .vchip { min-width:44px; text-align:center; }
   .ev h6 { margin:12px 0 4px; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.3px; color:var(--muted); text-transform:uppercase; }
+  /* Q-day what-if: a year slider under the vault */
+  #qday { left:230px; right:330px; bottom:68px; padding:8px 14px 4px; max-width:620px; margin:0 auto; }
+  #qday .qh { display:flex; align-items:baseline; gap:10px; }
+  #qday .qh b { font:600 20px Inter, sans-serif; color:var(--core); font-variant-numeric:tabular-nums; }
+  #qday .qh .n { font:11px "IBM Plex Mono", monospace; color:var(--muted); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #qday.wi .qh b { color:var(--risk); } #qday.wi .qh .n { color:var(--risk); }
+  #qday input { width:100%; accent-color:var(--core); margin:4px 0 0; }
+  #qday.wi input { accent-color:var(--risk); }
+  #qday .qt { position:relative; height:14px; font:9.5px "IBM Plex Mono", monospace; color:var(--faint); }
+  #qday .qt span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
+  #qday .ghost { padding:2px 8px; font-size:11px; }
+  .stats.wi .stat { border-style:dashed; }
+  .wichip { font:600 9.5px "IBM Plex Mono", monospace; letter-spacing:1px; color:var(--risk); border:1px dashed var(--risk); border-radius:3px; padding:1px 6px; }
+  /* proof after Approve: found → approved → live → signed */
+  .tl { display:flex; gap:0; margin:4px 0 10px; }
+  .tl div { flex:1; position:relative; padding-top:14px; font-size:11px; color:var(--muted); text-align:center; }
+  .tl div::before { content:""; position:absolute; top:3px; left:50%; width:9px; height:9px; margin-left:-4.5px; border-radius:50%; background:var(--line); }
+  .tl div::after { content:""; position:absolute; top:7px; left:calc(50% + 6px); right:calc(-50% + 6px); height:1px; background:var(--line); }
+  .tl div:last-child::after { display:none; }
+  .tl div.on::before { background:var(--safe); box-shadow:0 0 8px var(--safe); } .tl div.miss::before { background:var(--risk); }
+  .tl b { display:block; color:var(--text); font-weight:500; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:8px; font:11px "IBM Plex Mono", monospace; }
+  .ba div { border:1px solid var(--line2); border-radius:6px; padding:6px 8px; word-break:break-word; color:var(--muted); }
+  .ba div b { display:block; font:600 9.5px "IBM Plex Mono", monospace; letter-spacing:1.2px; color:var(--faint); margin-bottom:2px; }
+  .ba .pq { color:var(--safe); border-color:color-mix(in srgb, var(--safe) 45%, transparent); }
   .menu, .chev { display:none; }
   /* tablet and phone: counts become a strip under the header; legend, feed and hints go */
   @media (max-width:1100px) {
+    #qday { left:16px; right:16px; }
     #left { display:block; left:12px; right:12px; top:64px; width:auto; max-height:none; padding:6px; }
     #left .legend, #left .rule, .help { display:none; }
     #left .stats { grid-template-columns:repeat(4, 1fr); gap:6px; margin:0; }
@@ -181,6 +207,8 @@
     #queue { padding:0 10px 18px; }
     .card .row button { padding:7px 14px; font-size:12.5px; }
     #feed, .help { display:none; }
+    #qday { left:8px; right:8px; bottom:60px; padding:6px 10px 2px; }
+    #qday .qh .n { display:none; }
     .tag { font-size:8.5px; letter-spacing:.8px; } .tag.lane, .tag.infra small { display:none; }
     .tag.infra, .tag.agent { padding:1px 5px; }
     aside { width:100vw; }
@@ -236,6 +264,11 @@
   <div id="queue"></div>
 </div>
 
+<div class="hud" id="qday">
+  <div class="qh"><span class="k">Q-day</span><b id="qz">–</b><span class="n" id="qn">drag to move the year a quantum computer breaks RSA / ECC</span><button class="ghost" id="qreset" hidden>back to run</button></div>
+  <input type="range" id="qr" min="2027" max="2045" step="1" aria-label="Q-day year">
+  <div class="qt" id="qt"></div>
+</div>
 <div class="help">drag · scroll · click a crystal</div>
 <div class="hud" id="feed"></div>
 <div class="hud" id="tip"></div>
@@ -436,7 +469,7 @@ AG.forEach(([id, name], i) => {
 });
 
 // assets
-let RUN = null, FILTER = null, OPEN = null;
+let RUN = null, FILTER = null, OPEN = null, WHATIF = null;   // WHATIF: /whatif answer while the slider is off the run's anchor
 const ASSET = {};      // id → { mesh, beacon, st, res, pos }
 const assetGroup = new THREE.Group(); scene.add(assetGroup);
 const LANES = [['ssh', 'SSH HOSTS', 7], ['repo_key', 'KEY FILES', 10.5], ['firmware', 'FIRMWARE', 12.5], ['tls', 'TLS ENDPOINTS', 18], ['cert', 'CERTIFICATES', 26]];
@@ -460,9 +493,11 @@ function buildAssets() {
   for (const k in ASSET) { ASSET[k].tag && ASSET[k].tag.el.remove(); delete ASSET[k]; }
   laneLbls.forEach(l => { l.el.remove(); LBL.splice(LBL.indexOf(l), 1); }); laneLbls.length = 0;
   for (let i = LBL.length - 1; i >= 0; i--) if (LBL[i].asset) LBL.splice(i, 1);
-  const items = RUN.results.map(res => ({ res, p:res.signal.props, st:statusOf(res) }));
+  // lanes keep the run's order; colour follows the what-if when the slider moved, so assets change state in place
+  const items = RUN.results.map(res => { const st0 = statusOf(res), w = WHATIF && WHATIF.assets[res.signal.id];
+    return { res, p:res.signal.props, st0, st:w ? w.st : st0 }; });
   for (const [kind, name, r] of LANES) {
-    const xs = items.filter(x => kindOf(x.p) === kind).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
+    const xs = items.filter(x => kindOf(x.p) === kind).sort((a, b) => ORDER[a.st0] - ORDER[b.st0] || b.res.signal.score - a.res.signal.score);
     if (!xs.length) continue;
     laneRings.push(ring(r, 0x2a3446, .55, .015, .03));
     laneLbls.push(label(`${name} · ${xs.length}`, 'lane', new THREE.Vector3(r + .6, .1, 0)));
@@ -478,9 +513,9 @@ function buildAssets() {
       const outline = new THREE.LineSegments(new THREE.EdgesGeometry(GEO[kind], 25), new THREE.LineBasicMaterial({ color:c, transparent:true, opacity:x.st === 'retire' ? .45 * T.edge : T.edge }));
       mesh.add(outline);
       assetGroup.add(mesh);
-      const o = { mesh, st:x.st, res:x.res, p:x.p, pos, base:mesh.material.emissiveIntensity, phase:Math.random() * 6.28, flash:0 };
+      const o = { mesh, st:x.st, st0:x.st0, res:x.res, p:x.p, pos, base:mesh.material.emissiveIntensity, phase:Math.random() * 6.28, flash:PREV[x.p.asset_id] && PREV[x.p.asset_id] !== x.st ? 1 : 0 };
       const act = x.st !== 'safe' ? nextAction(x.res) : null;
-      if (act) {
+      if (act || (WHATIF && x.st !== 'safe')) {
         // late / at-risk assets get a tall beacon and a tag; retire is a short, dim marker so it does not drown them out
         const tall = x.st !== 'retire', h = tall ? 9 : 2.6;
         const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, h, 6, 1, true), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.5, depthWrite:false }));
@@ -493,9 +528,13 @@ function buildAssets() {
   }
   const counts = { late:0, risk:0, retire:0, safe:0 }; items.forEach(x => counts[x.st]++);
   for (const k in counts) $('#c-' + k).textContent = counts[k];
-  buildQueue(items); applyFilter();
+  $('#left .stats').classList.toggle('wi', !!WHATIF);
+  for (const k in PREV) delete PREV[k]; items.forEach(x => PREV[x.p.asset_id] = x.st);
+  // decisions stay on the run's own verdicts: a what-if never drafts or approves anything
+  buildQueue(items.map(x => ({ ...x, st:x.st0 }))); applyFilter();
 }
 
+const PREV = {};   // last colour shown per asset, so a slider move flashes only the assets that changed
 function buildQueue(items) {
   const q = items.filter(x => x.st !== 'safe' && nextAction(x.res)).sort((a, b) => ORDER[a.st] - ORDER[b.st] || b.res.signal.score - a.res.signal.score);
   $('#nq').textContent = q.length;
@@ -663,8 +702,9 @@ const ANS = { support:'yes', reject:'no', uncertain:'unclear' };
 const RISK = new Set(['harvest_now_decrypt_later', 'forgery_after_qday']);
 const tone = t => t.verdict === 'uncertain' ? 'uncertain' : RISK.has(t.hypothesis_id) ? (t.verdict === 'support' ? 'support' : 'reject')
                 : t.hypothesis_id === 'already_hybrid' && t.verdict === 'support' ? 'reject' : 'retire';
+const ZP = () => WHATIF ? WHATIF.z : Z.nist_disallow, ZE = () => WHATIF ? WHATIF.earliest : Z.nist_deprecate;
 function say(p, st) {   // the status in one plain sentence, from the same numbers the verdicts used
-  const x = +p.x || 0, y = +p.y || 0;
+  const x = +p.x || 0, y = +p.y || 0, Z = { nist_disallow:ZP(), nist_deprecate:ZE() };
   if (st === 'retire') return 'Not in use. Retire it instead of migrating.';
   if (st === 'safe') return /mlkem|sntrup|kyber/i.test(p.negotiated_kex || '') ? 'Already uses post-quantum key exchange.' : 'No quantum risk before the deadlines.';
   if (st === 'late') return `Too late: migration had to start by ${+(Z.nist_disallow - x - y).toFixed(2)}.`;
@@ -672,7 +712,7 @@ function say(p, st) {   // the status in one plain sentence, from the same numbe
   return early >= YEAR ? `Start migrating by ${early} to beat ${Z.nist_deprecate}.` : `Misses ${Z.nist_deprecate}. Start by ${main} to make ${Z.nist_disallow}.`;
 }
 function moscaBar(p, st) {
-  const x = +p.x || 0, y = +p.y || 0, x0 = 8, x1 = 372, span = 16;
+  const x = +p.x || 0, y = +p.y || 0, x0 = 8, x1 = 372, span = 20, Z = { nist_disallow:ZP(), nist_deprecate:ZE() };
   const X = yr => x0 + Math.min(yr - YEAR, span) / span * (x1 - x0), end = YEAR + x + y, ym = YEAR + y;
   const c = '#' + COL[st].toString(16).padStart(6, '0');
   const marks = [Z.nist_deprecate, Z.nist_disallow].map(z => `<line x1="${X(z)}" x2="${X(z)}" y1="4" y2="30" stroke="#5b677c" stroke-dasharray="2 3"/><text x="${X(z)}" y="44" text-anchor="middle">${z}</text>`).join('');
@@ -687,12 +727,13 @@ function openDrawer(id) {
     : `<span class="s">${esc(a.status)}${a.decided_in ? ' in run ' + esc(a.decided_in) : ''}${a.applied ? ' · ' + esc(a.applied.message || '') : ''}</span>`;
   const done = drafts.filter(a => a.status !== 'draft');
   d.className = 'on ' + st;
-  d.innerHTML = `<div class="dh"><span class="chip ${st}">${ST[st]}</span><div><div class="nm">${esc(short(p))}</div><div class="sb">${esc(sub(p))}</div></div><button class="x" aria-label="Close">×</button></div>
+  d.innerHTML = `<div class="dh"><span class="chip ${st}">${ST[st]}</span>${WHATIF ? `<span class="wichip" title="the run said ${ST[o.st0]}">WHAT-IF ${WHATIF.z}</span>` : ''}<div><div class="nm">${esc(short(p))}</div><div class="sb">${esc(sub(p))}</div></div><button class="x" aria-label="Close">×</button></div>
     <div class="say ${st}">${esc(say(p, st))}</div>
     <section>${moscaBar(p, st)}</section>
     <section>${rec ? `<div class="rec"><span class="k">Recommended</span><div class="l">${esc(rec.label)}</div>${btns(rec)}</div>`
         : done.length ? `<div class="rec"><span class="k">Decided</span><div class="l">${esc(done[0].label)}</div>${btns(done[0])}</div>` : '<span class="s">No action needed.</span>'}
       ${rest.length ? `<details class="more"><summary>${rest.length} more action${rest.length > 1 ? 's' : ''}</summary>${rest.map(a => `<div class="ax"><div class="l">${esc(a.label)}</div>${btns(a)}</div>`).join('')}</details>` : ''}</section>
+    ${done.some(a => a.status === 'approved') && ['tls', 'ssh'].includes(p.kind) ? `<section id="proof"><h5>Proof</h5><span class="s">loading…</span></section>` : ''}
     <details class="ev"><summary>Evidence</summary>
       ${res.verdicts.map(t => `<details class="v"><summary><span class="vchip ${tone(t)}">${ANS[t.verdict] || esc(t.verdict)}</span>${esc(HYP[t.hypothesis_id] || t.hypothesis_id)}</summary>
         <div class="r">${esc(t.reason)}</div>${t.sql_executed || t.sql ? `<pre>${esc(t.sql_executed || t.sql)}</pre>` : ''}</details>`).join('')}
@@ -705,6 +746,37 @@ function openDrawer(id) {
   d.querySelectorAll('.ok, .no').forEach(b => b.onclick = () => decide(b, id, b.dataset.a, b.classList.contains('ok')));
   d.setAttribute('aria-hidden', 'false');
   requestAnimationFrame(() => requestAnimationFrame(() => d.querySelectorAll('.seg').forEach(r => r.setAttribute('width', r.dataset.w))));
+  if (d.querySelector('#proof')) showProofs(id, done.find(a => a.status === 'approved'));
+}
+
+// ---------- proof after Approve: the asset is handshaken again and before / approval / after are signed ----------
+const fmt = t => t ? new Date(typeof t === 'number' ? t * 1000 : t).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '–';
+const isPQ = s => /mlkem|sntrup|kyber/i.test(s || '');
+async function showProofs(id, act) {
+  const box = $('#proof'); if (!box) return;
+  let xs = []; try { xs = await (await fetch('/proofs?asset=' + encodeURIComponent(id))).json(); } catch (_) {}
+  if (OPEN !== id || !$('#proof')) return;
+  const pr = xs[0], o = ASSET[id], live = pr && (pr.outcome === 'fixed' || pr.outcome === 'already');
+  box.innerHTML = `<h5>Proof</h5>
+    <div class="tl"><div class="on"><b>Found</b>${esc(o.p.found_at || '–')}</div><div class="on"><b>Approved</b>${pr && pr.approved_at ? fmt(pr.approved_at) : 'by you'}</div>
+      <div class="${pr ? (live ? 'on' : 'miss') : ''}"><b>${pr ? (live ? 'Live' : 'Not live') : 'Live?'}</b>${pr ? fmt(pr.time) : 'not checked'}</div>
+      <div class="${pr ? 'on' : ''}"><b>Signed</b>${pr ? esc(pr.algorithm) : '–'}</div></div>
+    ${pr ? `<div class="ba"><div><b>BEFORE · RUN</b>${esc(pr.before.kex || '–')}</div><div class="${isPQ(pr.after.kex) ? 'pq' : ''}"><b>AFTER · NOW</b>${esc(pr.after.kex || '–')}</div></div>
+      <div class="r" style="margin:8px 0">${esc(pr.message)}</div>` : '<div class="r" style="margin-bottom:8px">Handshake the endpoint again to prove the change is live.</div>'}
+    <div class="row"><button class="ok" id="verify">Verify now</button>${pr ? `<a class="ghost" href="/proofs/${esc(pr.id)}">Signed proof</a>` : ''}</div>
+    ${pr ? `<div class="meta mono" style="margin-top:8px;color:var(--faint);font-size:10.5px;word-break:break-all">chain root ${esc(pr.chain_root.slice(0, 24))}… · ${xs.length} check${xs.length > 1 ? 's' : ''}</div>` : ''}`;
+  $('#verify').onclick = () => verify(id, act.id);
+}
+async function verify(id, actionId) {
+  const b = $('#verify'); if (b) { b.disabled = true; b.textContent = 'handshaking…'; }
+  const o = ASSET[id]; if (o) { sendAgent('skeptic', id, 1400, true); o.flash = 1; }
+  try {
+    const r = await fetch('/proof', { method:'POST', headers:{ 'content-type':'application/json' }, body:JSON.stringify({ run_id:RUN.summary.run_id, action_id:actionId }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || 'HTTP ' + r.status);
+    const pr = await r.json();
+    toast(`Proof signed (${pr.attestation.algorithm}): ${pr.message}`);
+  } catch (e) { toast('Could not verify: ' + e.message); }
+  if (OPEN === id) showProofs(id, { id:actionId });
 }
 function closeDrawer() { OPEN = null; $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
@@ -720,6 +792,7 @@ async function decide(btn, assetId, actionId, ok) {
     shot(INFRA.human.top, core.position, ok ? COL.safe : COL.retire, 1100);
     const o = ASSET[assetId]; if (o) { o.flash = 1; shot(INFRA.human.top, o.pos, ok ? COL.safe : COL.retire, 900); }
     if (a.applied && a.applied.applied) setTimeout(() => { corePulse = 1; }, 1000);
+    if (ok && a.applied && a.applied.applied) setTimeout(() => verify(assetId, actionId), 1600);   // executed: prove it is live
     box?.classList.add('gone');
     toast(ok ? (a.applied && a.applied.applied ? `Approved and applied: ${a.applied.message}. The vault signed the run again.` : `Approved. ${a.applied ? a.applied.message : 'Recorded in the signed ledger.'}`) : 'Rejected. Recorded in the ledger.');
     setTimeout(async () => { await load(runId); if (OPEN) openDrawer(OPEN); }, 450);
@@ -737,7 +810,34 @@ async function load(runId) {
   $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill opt on';
   if (!LIVE) showSpeed(s, ((RUN.extras || {}).probes || {}).probes || 0);
   for (const [id, n] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[n]; a.href = `/runs/${s.run_id}/extras/${n}`; }
-  buildAssets();
+  if (WHATIF) await whatif(WHATIF.z, true); else buildAssets();
+}
+
+// ---------- Q-day what-if: the server re-runs the same tests with the anchor moved; nothing is stored or signed ----------
+let wiT = null;
+async function whatif(z, quiet) {
+  if (z === Z.nist_disallow) { WHATIF = null; qday(); buildAssets(); return; }
+  try { const r = await fetch('/whatif?z=' + z); if (!r.ok) throw new Error('HTTP ' + r.status); WHATIF = await r.json(); }
+  catch (e) { if (!quiet) toast('What-if failed: ' + e.message); return; }
+  if (+$('#qr').value !== WHATIF.z) return;           // the slider moved on while this was in flight
+  qday(); buildAssets();
+  // the vault reacts: assets that changed state flash; newly late ones are hit from the core
+  if (!quiet) for (const id in ASSET) { const o = ASSET[id]; if (o.flash && o.st === 'late') shot(core.position, o.pos, COL.late, 700); }
+  if (OPEN) openDrawer(OPEN);
+}
+function qday() {
+  const z = +$('#qr').value; $('#qz').textContent = z; $('#qday').classList.toggle('wi', !!WHATIF); $('#qreset').hidden = !WHATIF;
+  $('#qn').textContent = WHATIF ? `what-if · ${WHATIF.flipped} asset${WHATIF.flipped === 1 ? '' : 's'} change state · earlier anchor ${WHATIF.earliest} · not a run, not signed`
+                                : `run anchors ${Z.nist_deprecate} / ${Z.nist_disallow} · drag to move Q-day`;
+}
+function initQday() {
+  const r = $('#qr'); r.min = YEAR + 1; r.max = YEAR + 19; r.value = Z.nist_disallow;
+  const pct = y => (y - r.min) / (r.max - r.min) * 100;
+  $('#qt').innerHTML = [[Z.nist_deprecate, 'NIST deprecate'], [Z.nist_disallow, 'NIST disallow'], [Z.conservative, 'conservative']]
+    .filter(([y]) => y >= +r.min && y <= +r.max).map(([y, n]) => `<span style="left:${pct(y)}%">${y} ${n}</span>`).join('');
+  r.oninput = () => { $('#qz').textContent = r.value; clearTimeout(wiT); wiT = setTimeout(() => whatif(+r.value), 90); };
+  $('#qreset').onclick = () => { r.value = Z.nist_disallow; whatif(Z.nist_disallow); };
+  qday();
 }
 
 // ---------- a run, live: agents fly to the asset they are working on ----------
@@ -754,6 +854,8 @@ function onEv(ev) {
     case 'signal': { seen++; $('#prog').style.width = Math.min(100, seen / Math.max(1, RUN ? RUN.results.length : 100) * 100) + '%';
       sendAgent('scout', sig, 700); if (ASSET[sig]) { ASSET[sig].flash = .8; shot(agentPos('scout').clone(), ASSET[sig].pos, COL.agent, 500); }
       feed('ag', `scout → ${ASSET[sig] ? short(ASSET[sig].p) : sig}`); break; }
+    case 'proof': { const o = ASSET[sig]; if (o) { o.flash = 1; shot(o.pos, core.position, ev.outcome === 'fixed' || ev.outcome === 'already' ? COL.safe : COL.risk, 1100); }
+      setTimeout(() => corePulse = 1, 1000); feed('in', `proof · ${ASSET[sig] ? short(ASSET[sig].p) : sig} · ${ev.outcome} · signed`); break; }
     case 'model': { shot(INFRA.model.top, agentPos('explainer').clone(), COL.infra, 650); const a = AGENTS.explainer; a.target = INFRA.model.top.clone().add(new THREE.Vector3(-4, 2.5, 0)); a.until = performance.now() + 600;
       feed('in', `nemotron · ${ev.cached ? 'cache hit' : ev.ok ? 'answered' : 'failed'}`); break; }
     case 'step': {
@@ -826,7 +928,8 @@ $('#go').onclick = async () => {
   const on = m.model && m.model.online;
   $('#p-sys').textContent = `${m.data_backend} · ${on ? 'nemotron' : 'model offline'}`; $('#p-sys').className = 'pill opt ' + (m.data_backend === 'zetaris' && on ? 'on' : '');
   const c = ((m.extra || {}).cards || [])[0]; const am = c && /Anchors: (.*)/.exec(c.note || ''); if (am) am[1].split(', ').forEach(kv => { const [k, val] = kv.split('='); if (+val) Z[k] = +val; });
-  await load(); listen();
+  initQday(); await load(); listen();
+  const h = /asset=([^&]+)/.exec(location.hash); if (h) focusAsset(decodeURIComponent(h[1]), true);   // a link straight to one asset
 })();
 </script>
 </body>

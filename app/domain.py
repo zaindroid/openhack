@@ -114,9 +114,13 @@ class MoscaDomain(Domain):
         res.data = {"asset_id": r["asset_id"], **(res.data or {})}
         return res
 
-    def _test(self, r, hyp, sql, n):
+    def _test(self, r, hyp, sql, n, zp: int | None = None, ze: int | None = None):
+        """zp / ze move the primary and earliest anchors (the Q-day what-if, app/routes.py); default: algorithms.yaml."""
+        zp, ze = zp or Z[PRIMARY], ze or Z[EARLIEST]
+        pn = PRIMARY if zp == Z[PRIMARY] else f"what-if {zp}"
+        en = EARLIEST if ze == Z[EARLIEST] else f"what-if {ze}"
         x, y = float(r["x"]), float(r["y"])
-        rem_p, rem_e = Z[PRIMARY] - YEAR, Z[EARLIEST] - YEAR
+        rem_p, rem_e = zp - YEAR, ze - YEAR
         pq_kex = _is_pq(r["negotiated_kex"], PQ_KEX) or _is_pq(r["algorithm"], PQ_KEX)
         pq_sig = _is_pq(r["negotiated_sig"], PQ_SIG) or _is_pq(r["algorithm"], PQ_SIG)
         dead = (not r["in_use"]) or (bool(r["expires"]) and str(r["expires"]) < AS_OF.isoformat())
@@ -141,10 +145,10 @@ class MoscaDomain(Domain):
                 return TestResult(hyp.id, "reject", "asset is dead; retirement covers it", sql, n)
             ineq = f"x+y = {x:g}+{y:g} = {x + y:g} y"
             if x + y > rem_p:
-                return TestResult(hyp.id, "support", f"LATE: {ineq} > {rem_p} y left to {Z[PRIMARY]} ({PRIMARY}); start-by year {Z[PRIMARY] - x - y:g} has passed", sql, n, {"x": x, "y": y, "z": Z[PRIMARY]})
+                return TestResult(hyp.id, "support", f"LATE: {ineq} > {rem_p} y left to {zp} ({pn}); start-by year {zp - x - y:g} has passed", sql, n, {"x": x, "y": y, "z": zp})
             if x + y > rem_e:
-                return TestResult(hyp.id, "uncertain", f"AT RISK: {ineq} ≤ {rem_p} y to {Z[PRIMARY]} but > {rem_e} y to {Z[EARLIEST]} ({EARLIEST}); start by {Z[PRIMARY] - x - y:g}", sql, n, {"x": x, "y": y})
-            return TestResult(hyp.id, "reject", f"SAFE under every anchor: {ineq} ≤ {rem_e} y to {Z[EARLIEST]}", sql, n, {"x": x, "y": y})
+                return TestResult(hyp.id, "uncertain", f"AT RISK: {ineq} ≤ {rem_p} y to {zp} but > {rem_e} y to {ze} ({en}); start by {zp - x - y:g}", sql, n, {"x": x, "y": y})
+            return TestResult(hyp.id, "reject", f"SAFE under every anchor: {ineq} ≤ {rem_e} y to {ze}", sql, n, {"x": x, "y": y})
         if hyp.id == "forgery_after_qday":
             # Signatures are not retroactively broken: the risk is a forgery AFTER a CRQC exists while the signature
             # still matters. LATE when the signature must stay trustworthy beyond the primary anchor; AT RISK when it
@@ -156,14 +160,14 @@ class MoscaDomain(Domain):
             if dead:
                 return TestResult(hyp.id, "reject", "asset is dead; retirement covers it", sql, n)
             exp_year = int(str(r["expires"])[:4]) if r["expires"] else None
-            if exp_year and exp_year <= Z[EARLIEST] and x <= rem_e:
-                return TestResult(hyp.id, "reject", f"signature validity ends {exp_year}, before the earliest anchor {Z[EARLIEST]}; rotate at renewal", sql, n)
+            if exp_year and exp_year <= ze and x <= rem_e:
+                return TestResult(hyp.id, "reject", f"signature validity ends {exp_year}, before the earliest anchor {ze}; rotate at renewal", sql, n)
             horizon = f"must stay trustworthy {x:g} y{' (+' + format(y, 'g') + ' y to migrate)' if y else ''}"
             if x > rem_p:
-                return TestResult(hyp.id, "support", f"LATE: signatures {horizon}, beyond {rem_p} y to {Z[PRIMARY]} ({PRIMARY}); a CRQC could forge them while they still count", sql, n, {"x": x, "y": y, "z": Z[PRIMARY]})
+                return TestResult(hyp.id, "support", f"LATE: signatures {horizon}, beyond {rem_p} y to {zp} ({pn}); a CRQC could forge them while they still count", sql, n, {"x": x, "y": y, "z": zp})
             if x > rem_e or y > rem_e:
-                return TestResult(hyp.id, "uncertain", f"AT RISK: {horizon}; exceeds {rem_e} y to {Z[EARLIEST]} ({EARLIEST}); rotate before then", sql, n, {"x": x, "y": y})
-            return TestResult(hyp.id, "reject", f"SAFE: {horizon}, within {rem_e} y to {Z[EARLIEST]}; rotate at next renewal", sql, n, {"x": x, "y": y})
+                return TestResult(hyp.id, "uncertain", f"AT RISK: {horizon}; exceeds {rem_e} y to {ze} ({en}); rotate before then", sql, n, {"x": x, "y": y})
+            return TestResult(hyp.id, "reject", f"SAFE: {horizon}, within {rem_e} y to {ze}; rotate at next renewal", sql, n, {"x": x, "y": y})
         return TestResult(hyp.id, "uncertain", "unknown hypothesis")
 
     # ---- plan -----------------------------------------------------------------------------------------------------
