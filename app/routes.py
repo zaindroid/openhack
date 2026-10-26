@@ -2,7 +2,9 @@
 
 GET  /whatif?z=YEAR     the latest run's assets judged again with Q-day moved to YEAR (the earlier anchor moves with it,
                         keeping the algorithms.yaml gap). Same tests (MoscaDomain._test), same evidence (the run's rows);
-                        nothing is queried, stored or signed: a what-if, not a run.
+                        nothing is queried, stored or signed: a what-if, not a run. One more state than the run: an asset
+                        the tests call SAFE only because there is still time to migrate, but that still runs classical
+                        public-key crypto, is "exposed": it breaks on Q-day unless it is migrated by start_by.
 POST /proof             {run_id, action_id}: after a human approved an action, handshake its asset again (TLS: openssl
                         s_client; SSH: the server's KEXINIT, no login), compare with the run's evidence and sign
                         before / approval / after with the notary (ML-DSA). Only assets in that run's inventory, which
@@ -39,6 +41,15 @@ def _latest():
     return max(done, key=lambda r: r.created) if done else None
 
 
+def classical(p: dict) -> bool:
+    """Still on quantum-vulnerable public-key crypto for what the asset is used for (key exchange and/or signatures)."""
+    if str(p.get("algorithm") or "").lower() in M.NOT_VULNERABLE:
+        return False
+    kex = M._is_pq(p.get("negotiated_kex"), M.PQ_KEX) or M._is_pq(p.get("algorithm"), M.PQ_KEX)
+    sig = M._is_pq(p.get("negotiated_sig"), M.PQ_SIG) or M._is_pq(p.get("algorithm"), M.PQ_SIG)
+    return (p.get("purpose") in ("confidentiality", "both") and not kex) or (p.get("purpose") in ("signature", "both") and not sig)
+
+
 @router.get("/whatif")
 def whatif(z: int):
     if not M.YEAR < z <= M.YEAR + 40:
@@ -47,16 +58,18 @@ def whatif(z: int):
     if not run:
         raise HTTPException(404, "no finished run yet")
     hyps = M.DOMAIN.hypotheses(None, None)
-    assets, counts = {}, {v: 0 for v in STATUS.values()}
+    assets, counts = {}, {v: 0 for v in [*STATUS.values(), "exposed"]}
     for r in run.results:
         p = r["signal"]["props"]
         vs = [M.DOMAIN._test(p, h, None, 0, zp=z, ze=z - GAP) for h in hyps]
         st = STATUS[M.DOMAIN.status_of(vs)]
         was = STATUS[M.DOMAIN.status_of([SimpleNamespace(**v) for v in r["verdicts"]])]
+        if st == "safe" and classical(p):
+            st = "exposed"          # not late yet, but broken on Q-day if it is still classical then
         counts[st] += 1
         assets[p["asset_id"]] = {"st": st, "was": was, "start_by": round(z - float(p["x"]) - float(p["y"]), 2)}
     return {"run_id": run.id, "z": z, "earliest": z - GAP, "year": M.YEAR, "run_anchors": {"primary": M.Z[M.PRIMARY], "earliest": M.Z[M.EARLIEST]},
-            "counts": counts, "flipped": sum(a["st"] != a["was"] for a in assets.values()), "assets": assets,
+            "counts": counts, "flipped": sum(a["st"] != a["was"] and not (a["was"] == "safe" and a["st"] == "exposed") for a in assets.values()), "assets": assets,
             "note": "what-if over the run's evidence; not a run, not signed"}
 
 
