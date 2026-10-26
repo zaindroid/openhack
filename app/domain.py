@@ -114,13 +114,14 @@ class MoscaDomain(Domain):
         res.data = {"asset_id": r["asset_id"], **(res.data or {})}
         return res
 
-    def _test(self, r, hyp, sql, n, zp: int | None = None, ze: int | None = None):
-        """zp / ze move the primary and earliest anchors (the Q-day what-if, app/routes.py); default: algorithms.yaml."""
-        zp, ze = zp or Z[PRIMARY], ze or Z[EARLIEST]
+    def _test(self, r, hyp, sql, n, zp: int | None = None, ze: int | None = None, now: int | None = None):
+        """zp / ze move the primary and earliest anchors, now the year judged from (the timeline, app/routes.py);
+        defaults: algorithms.yaml and this year."""
+        zp, ze, now = zp or Z[PRIMARY], ze or Z[EARLIEST], now or YEAR
         pn = PRIMARY if zp == Z[PRIMARY] else f"what-if {zp}"
         en = EARLIEST if ze == Z[EARLIEST] else f"what-if {ze}"
         x, y = float(r["x"]), float(r["y"])
-        rem_p, rem_e = zp - YEAR, ze - YEAR
+        rem_p, rem_e = zp - now, ze - now
         pq_kex = _is_pq(r["negotiated_kex"], PQ_KEX) or _is_pq(r["algorithm"], PQ_KEX)
         pq_sig = _is_pq(r["negotiated_sig"], PQ_SIG) or _is_pq(r["algorithm"], PQ_SIG)
         dead = (not r["in_use"]) or (bool(r["expires"]) and str(r["expires"]) < AS_OF.isoformat())

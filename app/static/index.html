@@ -69,8 +69,8 @@
   .ok { background:var(--accent); border-color:var(--accent); color:#fff; }
   .ok:disabled, .no:disabled { opacity:.45; cursor:default; }
   .card.gone { opacity:0; transform:translateX(30px); }
-  .late { --c:var(--late); } .risk { --c:var(--risk); } .retire { --c:var(--retire); } .safe { --c:var(--safe); } .exposed { --c:var(--exposed); }
-  .stat.exposed { grid-column:1 / -1; }
+  .late { --c:var(--late); } .risk { --c:var(--risk); } .retire { --c:var(--retire); } .safe { --c:var(--safe); } .exposed { --c:var(--exposed); } .broken { --c:var(--broken); }
+  .stat.exposed, .stat.broken { grid-column:1 / -1; } .stat[hidden] { display:none; }
 
   /* labels in 3D space */
   .tag { position:absolute; transform:translate(-50%, -100%); white-space:nowrap; font:600 10px "IBM Plex Mono", monospace; letter-spacing:1.2px; pointer-events:none; }
@@ -159,9 +159,15 @@
   #qday .qh { display:flex; align-items:baseline; gap:10px; }
   #qday .qh b { font:600 20px Inter, sans-serif; color:var(--core); font-variant-numeric:tabular-nums; }
   #qday .qh .n { font:11px "IBM Plex Mono", monospace; color:var(--muted); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #qday.wi .qh b { color:var(--risk); } #qday.wi .qh .n { color:var(--risk); }
-  #qday input { width:100%; accent-color:var(--core); margin:4px 0 0; }
-  #qday.wi input { accent-color:var(--risk); }
+  #qday .qh b { color:var(--qc, var(--core)); } #qday.wi .qh .n { color:var(--qc, var(--risk)); }
+  #qday .qw { position:relative; height:22px; margin-top:4px; }
+  #qday .qtrack { position:absolute; left:8px; right:8px; top:9px; height:4px; border-radius:2px; }
+  #qday input { position:absolute; inset:0; width:100%; margin:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; }
+  #qday input::-webkit-slider-runnable-track { height:22px; background:transparent; }
+  #qday input::-moz-range-track { height:22px; background:transparent; }
+  #qday input::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; margin-top:3px; border-radius:50%; background:var(--bg, #0b0f17); border:3px solid var(--qc, var(--core)); box-shadow:0 0 10px var(--qc, var(--core)); }
+  #qday input::-moz-range-thumb { width:10px; height:10px; border-radius:50%; background:var(--bg, #0b0f17); border:3px solid var(--qc, var(--core)); box-shadow:0 0 10px var(--qc, var(--core)); }
+  #qday .qt .pin { color:var(--broken); font-weight:600; } #qday .qt .now { color:var(--core); }
   #qday .qt { position:relative; height:14px; font:9.5px "IBM Plex Mono", monospace; color:var(--faint); }
   #qday .qt span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
   #qday .ghost { padding:2px 8px; font-size:11px; }
@@ -200,7 +206,7 @@
     #qday { left:16px; right:16px; }
     #left { display:block; left:12px; right:12px; top:64px; width:auto; max-height:none; padding:6px; }
     #left .legend, #left .rule, .help { display:none; }
-    #left .stats { grid-template-columns:repeat(5, 1fr); gap:6px; margin:0; } #left .stat.exposed { grid-column:auto; }
+    #left .stats { grid-template-columns:repeat(5, 1fr); gap:6px; margin:0; } #left .stat.exposed, #left .stat.broken { grid-column:auto; } #left .stats:has(.broken:not([hidden])) .exposed { display:none; }
     #left .stat { padding:5px 8px; } #left .stat b { font-size:17px; } #left .stat span { font-size:10px; }
     #speed { display:none; }
   }
@@ -259,6 +265,7 @@
   <div class="stats">
     <button class="stat late" data-f="late"><b id="c-late">–</b><span>late</span></button>
     <button class="stat risk" data-f="risk"><b id="c-risk">–</b><span>at risk</span></button>
+    <button class="stat broken" data-f="broken" hidden title="Q-day has passed and it still uses RSA / ECC"><b id="c-broken">–</b><span>broken</span></button>
     <button class="stat exposed" data-f="exposed" title="Still classical: not late yet, but broken on Q-day unless migrated"><b id="c-exposed">–</b><span>breaks at Q-day</span></button>
     <button class="stat retire" data-f="retire"><b id="c-retire">–</b><span>retire</span></button>
     <button class="stat safe" data-f="safe"><b id="c-safe">–</b><span>safe</span></button>
@@ -284,8 +291,8 @@
 </div>
 
 <div class="hud" id="qday">
-  <div class="qh"><span class="k">Q-day</span><b id="qz">–</b><span class="n" id="qn">drag to move the year a quantum computer breaks RSA / ECC</span><button class="ghost" id="qreset" hidden>back to run</button></div>
-  <input type="range" id="qr" min="2027" max="2045" step="1" aria-label="Q-day year">
+  <div class="qh"><span class="k">Timeline</span><b id="qz">–</b><span class="n" id="qn">drag forward to see what happens if nothing is migrated</span><button class="ghost" id="qreset" hidden>today</button></div>
+  <div class="qw"><div class="qtrack" id="qtrack"></div><input type="range" id="qr" min="2026" max="2045" step="1" aria-label="Year on the timeline"></div>
   <div class="qt" id="qt"></div>
 </div>
 <div class="help">drag · scroll · click a crystal</div>
@@ -307,32 +314,32 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const YEAR = new Date().getFullYear();
 const Z = { nist_deprecate:2030, nist_disallow:2035, conservative:2040 };
-const COL = { late:0xe5484d, risk:0xd99a2b, retire:0x7c8494, safe:0x3fa37f, exposed:0xe0457b, agent:0x8b7cf6, infra:0x5b7fbf, core:0x5fb3c7 };   // set by applyTheme
-const ST = { late:'LATE', risk:'AT RISK', exposed:'BREAKS AT Q-DAY', retire:'RETIRE', safe:'SAFE' };
+const COL = { late:0xe5484d, risk:0xd99a2b, retire:0x7c8494, safe:0x3fa37f, exposed:0xe0457b, broken:0xff2d2d, agent:0x8b7cf6, infra:0x5b7fbf, core:0x5fb3c7 };   // set by applyTheme
+const ST = { broken:'BROKEN', late:'LATE', risk:'AT RISK', exposed:'BREAKS AT Q-DAY', retire:'RETIRE', safe:'SAFE' };
 const TAG = { ...ST, exposed:'Q-DAY' };
-const ORDER = { late:0, risk:1, exposed:2, retire:3, safe:4 };
+const ORDER = { broken:0, late:0, risk:1, exposed:2, retire:3, safe:4 };
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Themes: the glow lives in lines (outlines, rings, conduits, halos) and bloom picks those up; solids stay matte.
 const THEMES = {
   nebula:   { name:'Nebula', dark:true, bloom:[.95, .55, .28], amb:.55, key:.9, fog:.010, edge:.95, glow:1,
               c:{ bg:0x060a12, grid1:0x16233c, grid2:0x0c1424, solid:0x18233a, infra:0x4f8dff, core:0x22d3ee, agent:0xa78bfa, ring:0x1f4f9a, sent:0x34d399, screen:0x0f3b30 },
-              st:{ late:0xff5a6a, risk:0xffb547, retire:0x8e99ad, safe:0x34e3a6, exposed:0xff4f9a },
+              st:{ late:0xff5a6a, risk:0xffb547, retire:0x8e99ad, safe:0x34e3a6, exposed:0xff4f9a, broken:0xff2a2a },
               css:{ bg:'#060a12', panel:'rgba(9,14,26,.82)', line:'#1d2a42', line2:'#141e31', text:'#e6edf7', muted:'#93a0b6', faint:'#5d6a80', soft:'rgba(255,255,255,.025)',
                     drawer:'#0a101c', tagbg:'rgba(8,13,24,.85)', tagline:'#22314d', tagtext:'#b9c8e4', shadow:'rgba(0,0,0,.45)', accent:'#3e7bfa', tglow:'14px', edgeglow:'22%', edgeglow2:'85%' } },
   aurora:   { name:'Aurora', dark:true, bloom:[.9, .6, .28], amb:.55, key:.85, fog:.010, edge:.95, glow:1,
               c:{ bg:0x05141b, grid1:0x113640, grid2:0x0a2229, solid:0x12303a, infra:0x2dd4bf, core:0x5eead4, agent:0xc084fc, ring:0x13616a, sent:0x86efac, screen:0x0f3b30 },
-              st:{ late:0xff6b81, risk:0xfbbf24, retire:0x8fa3ad, safe:0x4ade80, exposed:0xf472b6 },
+              st:{ late:0xff6b81, risk:0xfbbf24, retire:0x8fa3ad, safe:0x4ade80, exposed:0xf472b6, broken:0xff3b3b },
               css:{ bg:'#05141b', panel:'rgba(6,24,31,.82)', line:'#163a42', line2:'#0f2b32', text:'#e2f3f2', muted:'#8fb3b5', faint:'#5a7c80', soft:'rgba(255,255,255,.03)',
                     drawer:'#071c23', tagbg:'rgba(5,22,28,.85)', tagline:'#1a4a52', tagtext:'#b5e3de', shadow:'rgba(0,0,0,.45)', accent:'#14b8a6', tglow:'14px', edgeglow:'24%', edgeglow2:'85%' } },
   graphite: { name:'Graphite', dark:true, bloom:[.4, .4, .55], amb:1, key:1.3, fog:.008, edge:.6, glow:.7,
               c:{ bg:0x14161b, grid1:0x262a33, grid2:0x1c1f26, solid:0x2a2f3a, infra:0x8fa3c4, core:0x9fd0dc, agent:0x9f94f0, ring:0x343a46, sent:0x7fc8a9, screen:0x2c4a40 },
-              st:{ late:0xe5484d, risk:0xd99a2b, retire:0x7c8494, safe:0x3fa37f, exposed:0xd6457f },
+              st:{ late:0xe5484d, risk:0xd99a2b, retire:0x7c8494, safe:0x3fa37f, exposed:0xd6457f, broken:0xd11f1f },
               css:{ bg:'#14161b', panel:'rgba(24,27,33,.92)', line:'#2a2f39', line2:'#22262e', text:'#e4e7ec', muted:'#9aa1ad', faint:'#686f7b', soft:'rgba(255,255,255,.025)',
                     drawer:'#181b21', tagbg:'rgba(22,25,31,.9)', tagline:'#323844', tagtext:'#c3c9d4', shadow:'rgba(0,0,0,.35)', accent:'#4f7cf7', tglow:'0px', edgeglow:'10%', edgeglow2:'40%' } },
   daylight: { name:'Daylight', dark:false, bloom:[.18, .3, .92], amb:1.6, key:1.6, fog:.006, edge:.9, glow:.85,
               c:{ bg:0xeef2f7, grid1:0xc6cfdc, grid2:0xdce2ea, solid:0xdbe2ec, infra:0x2f5fd0, core:0x0e8fb0, agent:0x6d4ad8, ring:0xb3bfd0, sent:0x0f9d6b, screen:0xbfe3d4 },
-              st:{ late:0xe0464c, risk:0xf0a020, retire:0x8a93a3, safe:0x22a06f, exposed:0xd6336c },
+              st:{ late:0xe0464c, risk:0xf0a020, retire:0x8a93a3, safe:0x22a06f, exposed:0xd6336c, broken:0xc81414 },
               css:{ bg:'#eef2f7', panel:'rgba(255,255,255,.88)', line:'#d5dce6', line2:'#e6eaf0', text:'#141821', muted:'#5f6878', faint:'#8a93a3', soft:'rgba(15,23,42,.03)',
                     drawer:'#ffffff', tagbg:'rgba(255,255,255,.92)', tagline:'#cfd7e3', tagtext:'#3a4456', shadow:'rgba(16,24,40,.10)', accent:'#2f5fd0', tglow:'0px', edgeglow:'30%', edgeglow2:'70%' } },
 };
@@ -547,7 +554,8 @@ AG.forEach(([id, name], i) => {
 
 // assets
 let RUN = null, FILTER = null, OPEN = null, WHATIF = null;
-const WI = () => !!WHATIF && WHATIF.z !== Z.nist_disallow;   // the slider is off the run's anchor: a what-if   // WHATIF: /whatif answer while the slider is off the run's anchor
+const WI = () => !!WHATIF && WHATIF.at !== YEAR;   // the timeline is off today: a what-if
+const AT = () => WHATIF ? WHATIF.at : YEAR;   // WHATIF: /whatif answer while the slider is off the run's anchor
 const ASSET = {};      // id → { mesh, beacon, st, res, pos }
 const assetGroup = new THREE.Group(); scene.add(assetGroup);
 const LANES = [['ssh', 'SSH HOSTS', 7], ['repo_key', 'KEY FILES', 10.5], ['firmware', 'FIRMWARE', 12.5], ['tls', 'TLS ENDPOINTS', 18], ['cert', 'CERTIFICATES', 26]];
@@ -585,7 +593,7 @@ function buildAssets() {
       const a = start + j * step, pos = new THREE.Vector3(Math.cos(a) * r, 1.1, Math.sin(a) * r);
       const c = COL[x.st];
       const body = T.dark ? new THREE.Color(c).multiplyScalar(.3) : new THREE.Color(c);
-      const mesh = new THREE.Mesh(GEO[kind], new THREE.MeshStandardMaterial({ color:body, emissive:c, emissiveIntensity:(T.dark ? { late:.55, risk:.4, exposed:.45, retire:.05, safe:.16 } : { late:.35, risk:.32, exposed:.3, retire:0, safe:.08 })[x.st], flatShading:true, transparent:true, opacity:1, metalness:.15, roughness:.5 }));
+      const mesh = new THREE.Mesh(GEO[kind], new THREE.MeshStandardMaterial({ color:body, emissive:c, emissiveIntensity:(T.dark ? { broken:.8, late:.55, risk:.4, exposed:.45, retire:.05, safe:.16 } : { broken:.5, late:.35, risk:.32, exposed:.3, retire:0, safe:.08 })[x.st], flatShading:true, transparent:true, opacity:1, metalness:.15, roughness:.5 }));
       mesh.position.copy(pos); mesh.userData.id = x.p.asset_id; mesh.rotation.y = a;
       // the outline carries the glow (bloom picks it up), so the crystal reads as a lit edge rather than a lamp
       const outline = new THREE.LineSegments(new THREE.EdgesGeometry(GEO[kind], 25), new THREE.LineBasicMaterial({ color:c, transparent:true, opacity:x.st === 'retire' ? .45 * T.edge : T.edge }));
@@ -595,7 +603,7 @@ function buildAssets() {
       const act = x.st !== 'safe' ? nextAction(x.res) : null;
       if (act || (WHATIF && x.st !== 'safe')) {
         // late / at-risk assets get a tall beacon and a tag; breaks-at-Q-day a medium one; retire is a short, dim marker
-        const tall = x.st !== 'retire', h = x.st === 'retire' ? 2.6 : x.st === 'exposed' ? 5.5 : 9;
+        const tall = x.st !== 'retire', h = x.st === 'retire' ? 2.6 : x.st === 'exposed' ? 5.5 : x.st === 'broken' ? 11 : 9;
         const beacon = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, h, 6, 1, true), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.5, depthWrite:false }));
         beacon.position.set(pos.x, pos.y + h / 2 + .3, pos.z); assetGroup.add(beacon); o.beacon = beacon; o.dim = !tall;
         if (tall) { o.tag = label(`<span class="${x.st}">${TAG[x.st]}</span>`, 'att ' + x.st, new THREE.Vector3(pos.x, pos.y + h + .6, pos.z), { asset:x.p.asset_id });
@@ -604,8 +612,9 @@ function buildAssets() {
       ASSET[x.p.asset_id] = o;
     });
   }
-  const counts = { late:0, risk:0, exposed:0, retire:0, safe:0 }; items.forEach(x => counts[x.st]++);
+  const counts = { broken:0, late:0, risk:0, exposed:0, retire:0, safe:0 }; items.forEach(x => counts[x.st]++);
   for (const k in counts) $('#c-' + k).textContent = counts[k];
+  $('.stat.broken').hidden = !counts.broken;
   $('#left .stats').classList.toggle('wi', WI());
   for (const k in PREV) delete PREV[k]; items.forEach(x => PREV[x.p.asset_id] = x.st);
   // decisions stay on the run's own verdicts: a what-if never drafts or approves anything
@@ -786,7 +795,7 @@ function applyTheme(name) {
   const root = document.documentElement.style;
   for (const [k, v] of Object.entries(T.css)) root.setProperty('--' + k, v);
   const hex = n => '#' + n.toString(16).padStart(6, '0');
-  for (const k of ['late', 'risk', 'retire', 'safe', 'exposed']) root.setProperty('--' + k, hex(T.st[k]));
+  for (const k of ['late', 'risk', 'retire', 'safe', 'exposed', 'broken']) root.setProperty('--' + k, hex(T.st[k]));
   for (const k of ['agent', 'infra', 'core', 'sent']) root.setProperty('--' + k, hex(T.c[k]));
   Object.assign(COL, T.st, { agent:T.c.agent, infra:T.c.infra, core:T.c.core, sent:T.c.sent });
   scene.background.setHex(T.c.bg); scene.fog.color.setHex(T.c.bg); scene.fog.density = T.fog;
@@ -819,11 +828,12 @@ const ZP = () => WHATIF ? WHATIF.z : Z.nist_disallow, ZE = () => WHATIF ? WHATIF
 function say(p, st) {   // the status in one plain sentence, from the same numbers the verdicts used
   const x = +p.x || 0, y = +p.y || 0, Z = { nist_disallow:ZP(), nist_deprecate:ZE() };
   if (st === 'retire') return 'Not in use. Retire it instead of migrating.';
+  if (st === 'broken') return `Broken: Q-day (${Z.nist_disallow}) has come and it still uses ${p.negotiated_kex || p.algorithm || 'classical crypto'}. Traffic recorded before can be decrypted; signatures can be forged.`;
   if (st === 'exposed') return `Still classical: broken on Q-day (${Z.nist_disallow}) unless migrated. Start by ${+(Z.nist_disallow - x - y).toFixed(2)}.`;
   if (st === 'safe') return /mlkem|sntrup|kyber/i.test(p.negotiated_kex || '') ? 'Already uses post-quantum key exchange.' : 'No quantum risk before the deadlines.';
   if (st === 'late') return `Too late: migration had to start by ${+(Z.nist_disallow - x - y).toFixed(2)}.`;
   const early = +(Z.nist_deprecate - x - y).toFixed(2), main = +(Z.nist_disallow - x - y).toFixed(2);
-  return early >= YEAR ? `Start migrating by ${early} to beat ${Z.nist_deprecate}.` : `Misses ${Z.nist_deprecate}. Start by ${main} to make ${Z.nist_disallow}.`;
+  return early >= AT() ? `Start migrating by ${early} to beat ${Z.nist_deprecate}.` : `Misses ${Z.nist_deprecate}. Start by ${main} to make ${Z.nist_disallow}.`;
 }
 function moscaBar(p, st) {
   const x = +p.x || 0, y = +p.y || 0, x0 = 8, x1 = 372, span = 20, Z = { nist_disallow:ZP(), nist_deprecate:ZE() };
@@ -841,7 +851,7 @@ function openDrawer(id) {
     : `<span class="s">${esc(a.status)}${a.decided_in ? ' in run ' + esc(a.decided_in) : ''}${a.applied ? ' · ' + esc(a.applied.message || '') : ''}</span>`;
   const done = drafts.filter(a => a.status !== 'draft');
   d.className = 'on ' + st;
-  d.innerHTML = `<div class="dh"><span class="chip ${st}">${ST[st]}</span>${WI() ? `<span class="wichip" title="the run said ${ST[o.st0]}">WHAT-IF ${WHATIF.z}</span>` : ''}<div><div class="nm">${esc(short(p))}</div><div class="sb">${esc(sub(p))}</div></div><button class="x" aria-label="Close">×</button></div>
+  d.innerHTML = `<div class="dh"><span class="chip ${st}">${ST[st]}</span>${WI() ? `<span class="wichip" title="the run said ${ST[o.st0]}">IN ${WHATIF.at}, IF NOT MIGRATED</span>` : ''}<div><div class="nm">${esc(short(p))}</div><div class="sb">${esc(sub(p))}</div></div><button class="x" aria-label="Close">×</button></div>
     <div class="say ${st}">${esc(say(p, st))}</div>
     <section>${moscaBar(p, st)}</section>
     <section>${rec ? `<div class="rec"><span class="k">Recommended</span><div class="l">${esc(rec.label)}</div>${btns(rec)}</div>`
@@ -946,33 +956,39 @@ async function load(runId) {
   $('#p-run').textContent = `run ${s.run_id} · ${s.provenance_pct}% traced`; $('#p-run').className = 'pill opt on';
   if (!LIVE) showSpeed(s, ((RUN.extras || {}).probes || {}).probes || 0);
   for (const [id, n] of [['#dl-att', 'attestation'], ['#dl-cbom', 'cbom']]) { const a = $(id); a.hidden = !(RUN.extras || {})[n]; a.href = `/runs/${s.run_id}/extras/${n}`; }
-  await whatif(+$('#qr').value || Z.nist_disallow, true);
+  await whatif(+$('#qr').value || YEAR, true);
 }
 
 // ---------- Q-day what-if: the server re-runs the same tests with the anchor moved; nothing is stored or signed ----------
 let wiT = null;
-async function whatif(z, quiet) {
-  try { const r = await fetch('/whatif?z=' + z); if (!r.ok) throw new Error('HTTP ' + r.status); WHATIF = await r.json(); }
-  catch (e) { WHATIF = null; if (!quiet) toast('What-if failed: ' + e.message); qday(); buildAssets(); return; }
-  if (+$('#qr').value !== WHATIF.z) return;           // the slider moved on while this was in flight
+async function whatif(at, quiet) {
+  try { const r = await fetch('/whatif?year=' + at); if (!r.ok) throw new Error('HTTP ' + r.status); WHATIF = await r.json(); }
+  catch (e) { WHATIF = null; if (!quiet) toast('Timeline failed: ' + e.message); qday(); buildAssets(); return; }
+  if (+$('#qr').value !== WHATIF.at) return;          // the slider moved on while this was in flight
   qday(); buildAssets();
   // the vault reacts: assets that changed state flash; newly late ones are hit from the core
-  if (!quiet) for (const id in ASSET) { const o = ASSET[id]; if (o.flash && (o.st === 'late' || o.st === 'exposed')) shot(core.position, o.pos, COL[o.st], 700); }
+  if (!quiet) for (const id in ASSET) { const o = ASSET[id]; if (o.flash && (o.st === 'late' || o.st === 'broken')) shot(core.position, o.pos, COL[o.st], 700); }
   if (OPEN) openDrawer(OPEN);
 }
+const PHASE = y => y >= Z.nist_disallow ? 'broken' : y >= Z.nist_deprecate ? 'risk' : 'safe';
 function qday() {
-  const z = +$('#qr').value; $('#qz').textContent = z; $('#qday').classList.toggle('wi', WI()); $('#qreset').hidden = !WI();
-  const ex = WHATIF ? WHATIF.counts.exposed : 0, exs = ex ? ` · ${ex} break at Q-day unless migrated` : '';
-  $('#qn').textContent = WI() ? `what-if · ${WHATIF.flipped} change state${exs} · not a run, not signed`
-                              : `run anchors ${Z.nist_deprecate} / ${Z.nist_disallow}${exs} · drag to move Q-day`;
+  const y = +$('#qr').value, c = WHATIF ? WHATIF.counts : null, q = Z.nist_disallow;
+  $('#qz').textContent = y === YEAR ? `${y} · today` : y; $('#qday').classList.toggle('wi', WI()); $('#qreset').hidden = !WI();
+  $('#qday').style.setProperty('--qc', `var(--${PHASE(y)})`);
+  const left = q - y;
+  $('#qn').textContent = !c ? 'drag forward to see what happens if nothing is migrated'
+    : y >= q ? `Q-day ${q} has come · ${c.broken} broken · ${c.safe} post-quantum safe · if nothing is migrated`
+    : `${left} y to Q-day ${q} · ${c.late} too late to start · ${c.risk} at risk · ${c.exposed} break at Q-day${y === YEAR ? '' : ' · if nothing is migrated'}`;
 }
 function initQday() {
-  const r = $('#qr'); r.min = YEAR + 1; r.max = YEAR + 19; r.value = Z.nist_disallow;
+  const r = $('#qr'); r.min = YEAR; r.max = Math.max(YEAR + 19, Z.conservative); r.value = YEAR;
   const pct = y => (y - r.min) / (r.max - r.min) * 100;
-  $('#qt').innerHTML = [[Z.nist_deprecate, 'NIST deprecate'], [Z.nist_disallow, 'NIST disallow'], [Z.conservative, 'conservative']]
-    .filter(([y]) => y >= +r.min && y <= +r.max).map(([y, n]) => `<span style="left:${pct(y)}%">${y} ${n}</span>`).join('');
-  r.oninput = () => { $('#qz').textContent = r.value; clearTimeout(wiT); wiT = setTimeout(() => whatif(+r.value), 90); };
-  $('#qreset').onclick = () => { r.value = Z.nist_disallow; whatif(Z.nist_disallow); };
+  // the track says what each stretch means: still time, inside the earliest deadline, past Q-day
+  $('#qtrack').style.background = `linear-gradient(90deg, var(--safe) 0 ${pct(Z.nist_deprecate)}%, var(--risk) ${pct(Z.nist_deprecate)}% ${pct(Z.nist_disallow)}%, var(--broken) ${pct(Z.nist_disallow)}% 100%)`;
+  $('#qt').innerHTML = [[YEAR, 'today', 'now'], [Z.nist_deprecate, 'NIST deprecate', ''], [Z.nist_disallow, 'Q-day', 'pin']]
+    .filter(([y]) => y >= +r.min && y <= +r.max).map(([y, n, k]) => `<span class="${k}" style="left:calc(8px + (100% - 16px) * ${pct(y) / 100})">${y === YEAR ? '' : y + ' '}${n}</span>`).join('');
+  r.oninput = () => { $('#qz').textContent = r.value; $('#qday').style.setProperty('--qc', `var(--${PHASE(+r.value)})`); clearTimeout(wiT); wiT = setTimeout(() => whatif(+r.value), 90); };
+  $('#qreset').onclick = () => { r.value = YEAR; whatif(YEAR); };
   qday();
 }
 

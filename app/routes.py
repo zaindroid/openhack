@@ -1,10 +1,11 @@
 """Mosca's own endpoints (whycore includes `router` from app/routes.py, behind the same login).
 
-GET  /whatif?z=YEAR     the latest run's assets judged again with Q-day moved to YEAR (the earlier anchor moves with it,
-                        keeping the algorithms.yaml gap). Same tests (MoscaDomain._test), same evidence (the run's rows);
-                        nothing is queried, stored or signed: a what-if, not a run. One more state than the run: an asset
-                        the tests call SAFE only because there is still time to migrate, but that still runs classical
-                        public-key crypto, is "exposed": it breaks on Q-day unless it is migrated by start_by.
+GET  /whatif?year=Y     the timeline: the latest run's assets judged as of year Y if nothing is migrated meanwhile,
+                        with Q-day at the run's anchor (?z= moves it; the earlier anchor keeps the algorithms.yaml gap).
+                        Same tests (MoscaDomain._test), same evidence (the run's rows); nothing is queried, stored or
+                        signed: a what-if, not a run. Two states the run does not have: "exposed", SAFE only because
+                        there is still time but still on classical public-key crypto, so it breaks on Q-day unless
+                        migrated by start_by; and "broken", Y is at or past Q-day and it is still classical.
 POST /proof             {run_id, action_id}: after a human approved an action, handshake its asset again (TLS: openssl
                         s_client; SSH: the server's KEXINIT, no login), compare with the run's evidence and sign
                         before / approval / after with the notary (ML-DSA). Only assets in that run's inventory, which
@@ -51,24 +52,28 @@ def classical(p: dict) -> bool:
 
 
 @router.get("/whatif")
-def whatif(z: int):
+def whatif(year: int = M.YEAR, z: int = M.Z[M.PRIMARY]):
     if not M.YEAR < z <= M.YEAR + 40:
         raise HTTPException(400, f"z must be a year after {M.YEAR}")
+    if not M.YEAR <= year <= M.YEAR + 40:
+        raise HTTPException(400, f"year must be {M.YEAR} or later")
     run = _latest()
     if not run:
         raise HTTPException(404, "no finished run yet")
     hyps = M.DOMAIN.hypotheses(None, None)
-    assets, counts = {}, {v: 0 for v in [*STATUS.values(), "exposed"]}
+    assets, counts = {}, {v: 0 for v in [*STATUS.values(), "exposed", "broken"]}
     for r in run.results:
         p = r["signal"]["props"]
-        vs = [M.DOMAIN._test(p, h, None, 0, zp=z, ze=z - GAP) for h in hyps]
+        vs = [M.DOMAIN._test(p, h, None, 0, zp=z, ze=z - GAP, now=min(year, z - 1)) for h in hyps]
         st = STATUS[M.DOMAIN.status_of(vs)]
+        if year >= z and st != "retire" and classical(p):
+            st = "broken"           # Q-day has come and it is still classical
         was = STATUS[M.DOMAIN.status_of([SimpleNamespace(**v) for v in r["verdicts"]])]
         if st == "safe" and classical(p):
             st = "exposed"          # not late yet, but broken on Q-day if it is still classical then
         counts[st] += 1
         assets[p["asset_id"]] = {"st": st, "was": was, "start_by": round(z - float(p["x"]) - float(p["y"]), 2)}
-    return {"run_id": run.id, "z": z, "earliest": z - GAP, "year": M.YEAR, "run_anchors": {"primary": M.Z[M.PRIMARY], "earliest": M.Z[M.EARLIEST]},
+    return {"run_id": run.id, "at": year, "z": z, "earliest": z - GAP, "year": M.YEAR, "run_anchors": {"primary": M.Z[M.PRIMARY], "earliest": M.Z[M.EARLIEST]},
             "counts": counts, "flipped": sum(a["st"] != a["was"] and not (a["was"] == "safe" and a["st"] == "exposed") for a in assets.values()), "assets": assets,
             "note": "what-if over the run's evidence; not a run, not signed"}
 
