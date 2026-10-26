@@ -1,0 +1,10 @@
+[Unit]
+Description=Mosca sentinel sweep of the remote hosts every 5 minutes (hostinger-vps has fail2ban: one connection per sweep)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=10
+
+[Install]
+WantedBy=timers.target

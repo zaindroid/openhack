@@ -1,0 +1,11 @@
+[Unit]
+Description=Mosca sentinel: snapshot the remote sentinel hosts (one SSH call each, forced-command probe), publish for Zetaris
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=zman
+WorkingDirectory=/home/zman/apps/openhack-mosca
+ExecStart=/home/zman/apps/openhack-mosca/.venv/bin/python app/sentinel/sweep.py --remote
+TimeoutStartSec=240
+Nice=10

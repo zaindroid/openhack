@@ -63,9 +63,11 @@ def snapshot(h: dict) -> dict:
     src = open(PROBE, "rb").read()
     if h.get("local"):
         cmd = ["sudo", "-n", "python3", "-"]
-    else:   # one SSH call per host per sweep (fail2ban on the VPS counts connections)
-        cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", h["ssh"],
-               'if [ "$(id -u)" = 0 ]; then exec python3 -; else exec sudo -n python3 -; fi']
+    else:   # one SSH call per host per sweep (fail2ban on the VPS counts connections). The host's authorized_keys pins
+            # this key to a forced command that runs its installed copy of probe_host.py (infra/sentinel/install_probe.sh),
+            # so the key cannot open a shell or run anything else; the command sent here is ignored by the host.
+        cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", h["ssh"], "probe"]
+        src = b""
     out = subprocess.run(cmd, input=src, capture_output=True, timeout=120).stdout
     return json.loads(out)
 
