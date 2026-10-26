@@ -1,8 +1,8 @@
 FROM node:22-slim AS node
 FROM python:3.11-slim
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
-# curl: Coolify's container health check runs curl/wget inside the image
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# curl: Coolify's container health check runs curl/wget inside the image; openssl: an idea's own handshake checks (3.5 on trixie)
+RUN apt-get update && apt-get install -y --no-install-recommends curl openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv
 COPY requirements.txt /srv/requirements.txt
 RUN pip install --no-cache-dir -r /srv/requirements.txt
