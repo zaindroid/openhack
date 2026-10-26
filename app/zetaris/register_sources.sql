@@ -40,3 +40,14 @@ CREATE LIGHTNING FILESTORE TABLE assets_history FROM mosca_s3 FORMAT PARQUET OPT
   awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
   awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
 );
+-- 4. Sentinel sweeps and findings (app/sentinel/sweep.py writes them; app/sentinel/api.py reads them)
+CREATE LIGHTNING FILESTORE TABLE sentinel_sweeps FROM mosca_s3 FORMAT PARQUET OPTIONS (
+  path "s3a://mosca/sentinel/current/sweeps/",
+  awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
+  awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
+);
+CREATE LIGHTNING FILESTORE TABLE sentinel_findings FROM mosca_s3 FORMAT PARQUET OPTIONS (
+  path "s3a://mosca/sentinel/current/findings/",
+  awsAccessKeyId "${MOSCA_S3_ACCESS_KEY}",
+  awsSecretAccessKey "${MOSCA_S3_SECRET_KEY}"
+);

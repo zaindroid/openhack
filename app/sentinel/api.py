@@ -43,6 +43,8 @@ def refresh() -> None:
         old_sw = {h["host"]: h["sweep_time"] for h in STATE["hosts"]}
         old_f = {x["finding_id"]: x["status"] for x in STATE["findings"]}
         fnd = f["rows"]
+        for x in fnd:      # an all-digit id comes back from Zetaris as a number
+            x["finding_id"] = str(x["finding_id"])
         for x in fnd:      # decided in the vault, not yet folded by the collector
             d = memory.decision(_key(x["finding_id"]), x["finding_id"])
             if d and x["status"] == "open":

@@ -1,0 +1,12 @@
+[Unit]
+Description=Mosca sentinel: snapshot the local sentinel hosts (targets.yaml), compare with their baseline, publish for Zetaris
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=zman
+WorkingDirectory=/home/zman/apps/openhack-mosca
+# read-only probe (app/sentinel/probe_host.py) through sudo -n; the OSV check adds about a minute every 6 hours
+ExecStart=/home/zman/apps/openhack-mosca/.venv/bin/python app/sentinel/sweep.py
+TimeoutStartSec=240
+Nice=10

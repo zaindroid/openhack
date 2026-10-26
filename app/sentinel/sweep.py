@@ -75,7 +75,7 @@ def cname(n: str) -> str:
     return re.sub(r"-\d{9,}$", "", n)          # Coolify adds a deploy suffix; the service is the same
 
 
-def diff(host: str, base: dict, snap: dict, seen_src: set) -> list[dict]:
+def diff(host: str, base: dict, snap: dict, seen_src: set, ignore: tuple = ()) -> list[dict]:
     out = []
 
     def f(check, sev, title, subject, value="", detail="", base_value=""):
@@ -120,6 +120,8 @@ def diff(host: str, base: dict, snap: dict, seen_src: set) -> list[dict]:
 
     bc = {cname(c["name"]): c for c in base["containers"]}
     for c in snap["containers"]:
+        if any(i in c["image"] for i in ignore):     # targets.yaml ignore_images: known short-lived helpers
+            continue
         n, b = cname(c["name"]), bc.get(cname(c["name"]))
         if not b:
             f("container_new", "low", f"new container {n} ({c['image'][:60]})", n, c["image"][:60])
@@ -277,7 +279,7 @@ def main(argv: list[str]) -> int:
                 fnd["status"] = decided[k]
                 if decided[k] == "expected":
                     fold(base, seen, fnd, snap)
-        cur = [] if first else diff(name, base, snap, seen)
+        cur = [] if first else diff(name, base, snap, seen, tuple(h.get("ignore_images", [])))
         sw = sweeps.get(name, {})
         if "--cves" in argv or snap["packages"]["sha256"] != sw.get("packages_sha") or time.time() - sw.get("cve_t", 0) > CVE_EVERY_S:
             try:
