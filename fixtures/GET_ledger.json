@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "risk_id": "R1043",
+      "pulse_id": "P-0001",
+      "sealed_at": "2026-11-07T09:03:12Z",
+      "group_probability": 0.78,
+      "acaps_probability": "High",
+      "acaps_level": "High",
+      "outcome": null,
+      "resolved_at": null,
+      "verify_hash": "8d2f0e4c1a9b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d"
+    },
+    {
+      "risk_id": "R0987",
+      "pulse_id": "P-0000",
+      "sealed_at": "2026-05-02T08:00:00Z",
+      "group_probability": 0.72,
+      "acaps_probability": "Medium",
+      "acaps_level": "Medium",
+      "outcome": "materialised",
+      "resolved_at": "2026-10-20T00:00:00Z",
+      "verify_hash": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809"
+    }
+  ],
+  "k_min": 5,
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

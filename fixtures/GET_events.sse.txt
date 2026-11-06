@@ -1,0 +1,12 @@
+event: pulse_fired
+data: {"pulse_id":"P-0001","risk_id":"R1043"}
+
+event: answer_sealed
+data: {"pulse_id":"P-0001","n_answers":3}
+
+event: round_revealed
+data: {"pulse_id":"P-0001"}
+
+event: draft_decided
+data: {"draft_id":"D-0001","action":"accept"}
+

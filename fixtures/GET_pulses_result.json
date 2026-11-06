@@ -1,0 +1,64 @@
+{
+  "pulse_id": "P-0001",
+  "n": 8,
+  "plain_mean": 0.69,
+  "weighted_probability": 0.78,
+  "surprisingly_popular": "yes",
+  "dissent_index": 0.31,
+  "distribution": [
+    {
+      "bucket": "0.0-0.2",
+      "count": 0
+    },
+    {
+      "bucket": "0.2-0.4",
+      "count": 1
+    },
+    {
+      "bucket": "0.4-0.6",
+      "count": 2
+    },
+    {
+      "bucket": "0.6-0.8",
+      "count": 3
+    },
+    {
+      "bucket": "0.8-1.0",
+      "count": 2
+    }
+  ],
+  "agreement_by_region": [
+    {
+      "region": "Ouaddaï",
+      "n": 4,
+      "mean": 0.85
+    },
+    {
+      "region": "Wadi Fira",
+      "n": 3,
+      "mean": 0.6
+    },
+    {
+      "region": "N'Djamena",
+      "n": 1,
+      "mean": null
+    }
+  ],
+  "missing_themes": [
+    {
+      "theme": "night-time militia movement near Adré",
+      "count": 3
+    },
+    {
+      "theme": "camp capacity in Ouaddaï",
+      "count": 2
+    },
+    {
+      "theme": "seasonal access after rains",
+      "count": 1
+    }
+  ],
+  "revealed_at": "2026-11-07T10:00:00Z",
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

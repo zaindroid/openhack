@@ -1,0 +1,17 @@
+{
+  "shifts": [
+    {
+      "risk_id": "R1043",
+      "indicator": "acled_events",
+      "value": 21,
+      "baseline": 6.4,
+      "z": 2.9,
+      "url": "https://acleddata.com"
+    }
+  ],
+  "pulses_fired": [
+    "P-0001"
+  ],
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

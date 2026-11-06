@@ -1,0 +1,31 @@
+{
+  "id": "P-0001",
+  "risk_id": "R1043",
+  "panel_id": "PAN-TCD",
+  "fired_at": "2026-11-07T09:00:00Z",
+  "reason": "doorbell",
+  "round": 1,
+  "evidence": [
+    {
+      "source": "ACLED",
+      "indicator": "acled_events",
+      "value": 21,
+      "baseline": 6.4,
+      "z": 2.9,
+      "url": "https://acleddata.com"
+    },
+    {
+      "source": "UNHCR",
+      "indicator": "unhcr_arrivals",
+      "value": 4800,
+      "baseline": 2100,
+      "z": 2.2,
+      "url": "https://data.unhcr.org/en/situations/sudansituation"
+    }
+  ],
+  "question": "ACAPS rates this High. Do you still agree? What are we missing?",
+  "expires_at": "2026-11-08T09:00:00Z",
+  "n_answers": 0,
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

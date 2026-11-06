@@ -1,0 +1,10 @@
+{
+  "pseudonym": "quiet-heron",
+  "n_resolved": 5,
+  "mean_brier": 0.12,
+  "reliability_weight": 1.6,
+  "moved_before_acaps": 3,
+  "note": "On 3 of 5 resolved risks you were on the right side before the ACAPS rating moved.",
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

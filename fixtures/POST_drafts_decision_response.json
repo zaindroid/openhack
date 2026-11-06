@@ -1,0 +1,24 @@
+{
+  "id": "D-0001",
+  "risk_id": "R1043",
+  "pulse_id": "P-0001",
+  "proposed_probability": "High",
+  "proposed_level": "High",
+  "rationale_md": "The panel's weighted probability is 0.78, consistent with the current High rating (panel aggregate, n=8). Three experts report night-time militia movement near Adré not yet in public reporting (panel aggregate). ACLED shows 21 events in the last 7 days against a 90-day baseline of 6.4 (https://acleddata.com). UNHCR weekly arrivals rose to 4,800 (https://data.unhcr.org/en/situations/sudansituation).",
+  "citations": [
+    {
+      "text": "ACLED events, 7-day vs 90-day",
+      "url": "https://acleddata.com"
+    },
+    {
+      "text": "UNHCR Sudan situation, Chad arrivals",
+      "url": "https://data.unhcr.org/en/situations/sudansituation"
+    }
+  ],
+  "status": "accepted",
+  "decided_by": "analyst",
+  "decided_at": "2026-11-07T10:05:00Z",
+  "note": "Panel confirms; adding Adré night movements to triggers.",
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

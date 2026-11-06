@@ -1,0 +1,26 @@
+{
+  "n_resolved": 104,
+  "brier": {
+    "acaps_rating": 0.21,
+    "plain_mean": 0.17,
+    "weighted_extremized": 0.13
+  },
+  "ci95": {
+    "acaps_rating": [
+      0.18,
+      0.24
+    ],
+    "plain_mean": [
+      0.15,
+      0.2
+    ],
+    "weighted_extremized": [
+      0.11,
+      0.15
+    ]
+  },
+  "earlier_than_acaps_share": 0.41,
+  "assumptions": "8 synthetic experts per risk: 3 good, 3 average, 2 noisy; signal = outcome + noise; ACAPS scale mapped .1/.3/.5/.7/.9. Method test, not a claim about real experts.",
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}

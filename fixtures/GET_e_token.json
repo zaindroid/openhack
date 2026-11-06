@@ -1,0 +1,79 @@
+{
+  "pulse": {
+    "id": "P-0001",
+    "risk_id": "R1043",
+    "panel_id": "PAN-TCD",
+    "fired_at": "2026-11-07T09:00:00Z",
+    "reason": "doorbell",
+    "round": 1,
+    "evidence": [
+      {
+        "source": "ACLED",
+        "indicator": "acled_events",
+        "value": 21,
+        "baseline": 6.4,
+        "z": 2.9,
+        "url": "https://acleddata.com"
+      },
+      {
+        "source": "UNHCR",
+        "indicator": "unhcr_arrivals",
+        "value": 4800,
+        "baseline": 2100,
+        "z": 2.2,
+        "url": "https://data.unhcr.org/en/situations/sudansituation"
+      }
+    ],
+    "question": "ACAPS rates this High. Do you still agree? What are we missing?",
+    "expires_at": "2026-11-08T09:00:00Z",
+    "n_answers": 0,
+    "served_from": "live",
+    "generated_at": "2026-11-07T09:00:00Z"
+  },
+  "risk": {
+    "risk_id": "R1043",
+    "title": "Escalating cross-border insecurity linked to the Sudan conflict increases protection risks and humanitarian needs in eastern Chad",
+    "country_iso": "TCD",
+    "country": "Chad",
+    "probability_acaps": "High",
+    "impact_acaps": 4,
+    "level": "High",
+    "status": "Active",
+    "horizon_months": 6,
+    "triggers": [
+      {
+        "id": "T1",
+        "title": "Cross-border raids and militia activity in Ouaddaï",
+        "description": "Armed incursions from Darfur into border areas around Adré."
+      },
+      {
+        "id": "T2",
+        "title": "New refugee influx",
+        "description": "Renewed fighting in Darfur drives further arrivals into eastern Chad."
+      },
+      {
+        "id": "T3",
+        "title": "Escalation in Darfur",
+        "description": "RSF/SAF escalation in West and Central Darfur."
+      }
+    ],
+    "sources": [
+      {
+        "text": "ACAPS Risk List, Chad",
+        "url": "https://www.acaps.org/en/countries/chad"
+      }
+    ],
+    "served_from": "live",
+    "generated_at": "2026-11-07T09:00:00Z"
+  },
+  "round": 1,
+  "group_view_if_round2": null,
+  "mask_options": [
+    "known",
+    "pseudonym",
+    "anonymous"
+  ],
+  "seconds": 60,
+  "served_from": "live",
+  "generated_at": "2026-11-07T09:00:00Z"
+}
